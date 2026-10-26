@@ -106,6 +106,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .hl{color:var(--fg)}
 .tag{font:11px var(--f-ui);color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:1px 8px;align-self:center;justify-self:end;white-space:nowrap}
 .tag:hover{color:var(--fg);border-color:var(--fg)}
+.gr{grid-column:1/-1;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);color:var(--fg);font-size:16px}
+.gr .grh{font:12px var(--f-ui);color:var(--mute);margin-bottom:8px}
+.gnode{display:flex;justify-content:space-between;gap:24px;white-space:nowrap;overflow:hidden;font-family:var(--f-math);padding:6px 10px;border:1px solid var(--line);border-radius:8px}
+.gnode.gv{border-color:var(--fg)}
+.gnode .gb{color:var(--mute)}
+.gnode i,.gr i{font-family:var(--f-var);font-style:italic}
+.ga{text-align:center;color:var(--mute);line-height:1.2;font-size:13px}
+.grs{margin-top:12px;font:13px var(--f-ui);color:var(--mute)}.grs .gnode{margin-top:6px;font-size:16px;color:var(--fg)}
 .sol .rule{grid-column:2/-1;font-size:14px;color:var(--fg);padding:0 0 6px}
 .stepb{font:12px var(--f-ui);padding:4px 10px;display:none}
 .item.open .stepb{display:inline-block}
@@ -459,18 +467,18 @@ const CUR=[
  {w:["inv","sca"],L:5,v:'X',f:"a'(A + X)^-1 a",steps:["-a'(A + X)^-1 dX(A + X)^-1 a","-tr((A + X)^-1 aa'(A + X)^-1 dX)"],ans:"-(A + X)^-T aa'(A + X)^-T"},
  {w:["prod","sym"],L:5,v:'x',f:"1/2 x'Ax - b'x + 1/2 norm(x)^2",sym:['A'],cond:"A = A'",steps:["x'A dx - b'dx + x'dx"],ans:"Ax - b + x"},
  // level 6 · neural nets
- {w:["norm","sca"],L:6,v:'X',f:"norm(AXb - c)^2",steps:["2(AXb - c)'A dX b","2tr(b(AXb - c)'A dX)"],pre:"2(b(AXb - c)'A)'",ans:"2A'(AXb - c)b'"},
- {w:["norm","sca"],L:6,v:'X',f:"norm(XAb - c)^2",steps:["2(XAb - c)'dX Ab","2tr(Ab(XAb - c)'dX)"],ans:"2(XAb - c)b'A'"},
- {w:["norm","cyc"],L:6,v:'X',f:"normF(AXB - C)^2",steps:["2tr((AXB - C)'A dX B)","2tr(B(AXB - C)'A dX)"],pre:"2(B(AXB - C)'A)'",ans:"2A'(AXB - C)B'"},
- {w:["norm"],L:6,v:'x',f:"norm(ABx - c)^2",steps:["2(ABx - c)'AB dx"],pre:"2((ABx - c)'AB)'",ans:"2B'A'(ABx - c)"},
+ {w:["norm","sca"],L:6,v:'X',f:"norm(AXb - c)^2",g:[["Xb", "2A'(AXb - c)"], ["AXb - c", "2(AXb - c)"]],steps:["2(AXb - c)'A dX b","2tr(b(AXb - c)'A dX)"],pre:"2(b(AXb - c)'A)'",ans:"2A'(AXb - c)b'"},
+ {w:["norm","sca"],L:6,v:'X',f:"norm(XAb - c)^2",g:[["XAb - c", "2(XAb - c)"]],steps:["2(XAb - c)'dX Ab","2tr(Ab(XAb - c)'dX)"],ans:"2(XAb - c)b'A'"},
+ {w:["norm","cyc"],L:6,v:'X',f:"normF(AXB - C)^2",g:[["XB", "2A'(AXB - C)"], ["AXB - C", "2(AXB - C)"]],steps:["2tr((AXB - C)'A dX B)","2tr(B(AXB - C)'A dX)"],pre:"2(B(AXB - C)'A)'",ans:"2A'(AXB - C)B'"},
+ {w:["norm"],L:6,v:'x',f:"norm(ABx - c)^2",g:[["Bx", "2A'(ABx - c)"], ["ABx - c", "2(ABx - c)"]],steps:["2(ABx - c)'AB dx"],pre:"2((ABx - c)'AB)'",ans:"2B'A'(ABx - c)"},
  {w:["norm","sca"],L:6,v:'X',f:"norm(AXb - c)^2 + normF(X)^2",steps:["2(AXb - c)'A dX b + 2tr(X'dX)","2tr(b(AXb - c)'A dX) + 2tr(X'dX)"],ans:"2A'(AXb - c)b' + 2X"},
- {w:["lse","sca"],L:6,v:'X',f:"lse(AXb) - c'AXb",steps:["(softmax(AXb) - c)'A dX b","tr(b(softmax(AXb) - c)'A dX)"],pre:"(b(softmax(AXb) - c)'A)'",ans:"A'(softmax(AXb) - c)b'"},
+ {w:["lse","sca"],L:6,v:'X',f:"lse(AXb) - c'AXb",g:[["Xb", "A'(softmax(AXb) - c)"], ["AXb", "softmax(AXb) - c"]],steps:["(softmax(AXb) - c)'A dX b","tr(b(softmax(AXb) - c)'A dX)"],pre:"(b(softmax(AXb) - c)'A)'",ans:"A'(softmax(AXb) - c)b'"},
  {w:["softplus","sca"],L:6,v:'X',f:"log(1 + exp(-a'Xb))",s:"sigma(-a'Xb)",steps:["-s tr(ba'dX)"],ans:"-sab'"},
- {w:["tanh"],L:6,v:'x',f:"c'tanh(Ax)",steps:["c'(I - diag(tanh(Ax))^2)A dx"],pre:"(c'(I - diag(tanh(Ax))^2)A)'",ans:"A'(I - diag(tanh(Ax))^2)c"},
- {w:["tanh","sca"],L:6,v:'X',f:"c'tanh(Xa)",steps:["c'(I - diag(tanh(Xa))^2)dX a","tr(ac'(I - diag(tanh(Xa))^2)dX)"],pre:"(ac'(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)ca'"},
- {w:["norm","tanh","sca"],L:6,v:'X',f:"norm(tanh(Xa) - b)^2",steps:["2(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX a","2tr(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX)"],pre:"2(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2))'",ans:"2(I - diag(tanh(Xa))^2)(tanh(Xa) - b)a'"},
- {w:["sigv","sca"],L:6,v:'X',f:"c'sigma(Xa)",steps:["c'diag(sigma(Xa))(I - diag(sigma(Xa)))dX a","tr(ac'diag(sigma(Xa))(I - diag(sigma(Xa)))dX)"],pre:"(ac'diag(sigma(Xa))(I - diag(sigma(Xa))))'",ans:"diag(sigma(Xa))(I - diag(sigma(Xa)))ca'"},
- {w:["lse","tanh","sca"],L:6,v:'X',f:"lse(A tanh(Xa)) - e'A tanh(Xa)",steps:["(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX a","tr(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX)"],pre:"(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)A'(softmax(A tanh(Xa)) - e)a'"},
+ {w:["tanh"],L:6,v:'x',f:"c'tanh(Ax)",g:[["Ax", "(I - diag(tanh(Ax))^2)c"], ["tanh(Ax)", "c"]],steps:["c'(I - diag(tanh(Ax))^2)A dx"],pre:"(c'(I - diag(tanh(Ax))^2)A)'",ans:"A'(I - diag(tanh(Ax))^2)c"},
+ {w:["tanh","sca"],L:6,v:'X',f:"c'tanh(Xa)",g:[["Xa", "(I - diag(tanh(Xa))^2)c"], ["tanh(Xa)", "c"]],steps:["c'(I - diag(tanh(Xa))^2)dX a","tr(ac'(I - diag(tanh(Xa))^2)dX)"],pre:"(ac'(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)ca'"},
+ {w:["norm","tanh","sca"],L:6,v:'X',f:"norm(tanh(Xa) - b)^2",g:[["Xa", "2(I - diag(tanh(Xa))^2)(tanh(Xa) - b)"], ["tanh(Xa)", "2(tanh(Xa) - b)"]],steps:["2(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX a","2tr(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX)"],pre:"2(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2))'",ans:"2(I - diag(tanh(Xa))^2)(tanh(Xa) - b)a'"},
+ {w:["sigv","sca"],L:6,v:'X',f:"c'sigma(Xa)",g:[["Xa", "diag(sigma(Xa))(I - diag(sigma(Xa)))c"], ["sigma(Xa)", "c"]],steps:["c'diag(sigma(Xa))(I - diag(sigma(Xa)))dX a","tr(ac'diag(sigma(Xa))(I - diag(sigma(Xa)))dX)"],pre:"(ac'diag(sigma(Xa))(I - diag(sigma(Xa))))'",ans:"diag(sigma(Xa))(I - diag(sigma(Xa)))ca'"},
+ {w:["lse","tanh","sca"],L:6,v:'X',f:"lse(A tanh(Xa)) - e'A tanh(Xa)",g:[["Xa", "(I - diag(tanh(Xa))^2)A'(softmax(A tanh(Xa)) - e)"], ["tanh(Xa)", "A'(softmax(A tanh(Xa)) - e)"], ["A tanh(Xa)", "softmax(A tanh(Xa)) - e"]],steps:["(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX a","tr(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX)"],pre:"(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)A'(softmax(A tanh(Xa)) - e)a'"},
  {w:["prod","trT","sca"],L:6,v:'X',f:"norm(X'Xa - a)^2",steps:["2(X'Xa - a)'(dX'Xa + X'dX a)","2a'X'dX(X'Xa - a) + 2(X'Xa - a)'X'dX a","2tr((X'Xa - a)a'X'dX) + 2tr(a(X'Xa - a)'X'dX)"],ans:"2X(a(X'Xa - a)' + (X'Xa - a)a')"},
  // level 7 · attention
  {w:["lin","trT","sca"],L:7,v:'X',f:"a'X'Ab",steps:["a'dX'Ab","b'A'dX a","tr(ab'A'dX)"],ans:"Aba'"},
@@ -484,14 +492,17 @@ const CUR=[
  {w:["smax"],L:7,v:'x',f:"c'A softmax(Bx)",steps:["c'A(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')B dx"],pre:"(c'A(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')B)'",ans:"B'(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')A'c"},
  {w:["smax","sca"],L:7,v:'X',f:"c'softmax(Xa)",steps:["c'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX a","tr(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX)"],pre:"(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)'))'",ans:"(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')ca'"},
  // level 8 · rnn
- {w:["prod","cyc","sca"],L:8,v:'X',f:"a'XXb",steps:["a'dX Xb + a'X dX b","tr(Xba'dX) + tr(ba'X dX)"],ans:"ab'X' + X'ab'"},
+ {w:["prod","cyc","sca"],L:8,v:'X',shared:1,f:"a'X(Xb)",g:[["Xb","X'a"]],steps:["a'dX(Xb) + a'X dX b","tr(Xba'dX) + tr(ba'X dX)"],ans:"ab'X' + X'ab'"},
+ {w:["norm","prod","cyc"],L:8,v:'X',shared:1,f:"norm(X(Xb) - c)^2",g:[["Xb","2X'(X(Xb) - c)"],["X(Xb)","2(X(Xb) - c)"]],steps:["2(X(Xb) - c)'(dX(Xb) + X dX b)","2tr(Xb(X(Xb) - c)'dX) + 2tr(b(X(Xb) - c)'X dX)"],ans:"2(X(Xb) - c)b'X' + 2X'(X(Xb) - c)b'"},
+ {w:["lse","prod","cyc"],L:8,v:'X',shared:1,f:"lse(X(Xb)) - c'X(Xb)",g:[["Xb","X'(softmax(X(Xb)) - c)"],["X(Xb)","softmax(X(Xb)) - c"]],steps:["(softmax(X(Xb)) - c)'(dX(Xb) + X dX b)","tr(Xb(softmax(X(Xb)) - c)'dX) + tr(b(softmax(X(Xb)) - c)'X dX)"],ans:"(softmax(X(Xb)) - c)b'X' + X'(softmax(X(Xb)) - c)b'"},
+ {w:["sig","prod","cyc"],L:8,v:'X',shared:1,f:"sigma(a'X(Xb))",s:"sigma(a'X(Xb))",g:[["Xb","s(1 - s)X'a"],["a'X(Xb)","s(1 - s)"]],steps:["s(1 - s)(a'dX(Xb) + a'X dX b)","s(1 - s)(tr(Xba'dX) + tr(ba'X dX))"],ans:"s(1 - s)(ab'X' + X'ab')"},
  {w:["prod","cyc"],L:8,v:'X',f:"tr(X^3)",steps:["3tr(X^2 dX)"],ans:"3X'X'"},
  {w:["prod","cyc","sca"],L:8,v:'X',f:"a'X^3 b",steps:["a'dX X^2 b + a'X dX X b + a'X^2 dX b","tr(X^2 ba'dX) + tr(Xba'X dX) + tr(ba'X^2 dX)"],ans:"ab'X'X' + X'ab'X' + X'X'ab'"},
  {w:["norm","prod","cyc"],L:8,v:'X',f:"norm(X^2 b - c)^2",steps:["2(X^2 b - c)'(dX Xb + X dX b)","2tr(Xb(X^2 b - c)'dX) + 2tr(b(X^2 b - c)'X dX)"],ans:"2(X^2 b - c)b'X' + 2X'(X^2 b - c)b'"},
- {w:["norm","prod","cyc"],L:8,v:'X',f:"norm(X(Xa + b) - c)^2",steps:["2(X(Xa + b) - c)'(dX(Xa + b) + X dX a)","2tr((Xa + b)(X(Xa + b) - c)'dX) + 2tr(a(X(Xa + b) - c)'X dX)"],ans:"2(X(Xa + b) - c)(Xa + b)' + 2X'(X(Xa + b) - c)a'"},
+ {w:["norm","prod","cyc"],L:8,v:'X',shared:1,f:"norm(X(Xa + b) - c)^2",g:[["Xa + b","2X'(X(Xa + b) - c)"],["X(Xa + b)","2(X(Xa + b) - c)"]],steps:["2(X(Xa + b) - c)'(dX(Xa + b) + X dX a)","2tr((Xa + b)(X(Xa + b) - c)'dX) + 2tr(a(X(Xa + b) - c)'X dX)"],ans:"2(X(Xa + b) - c)(Xa + b)' + 2X'(X(Xa + b) - c)a'"},
  {w:["lse","prod","cyc"],L:8,v:'X',f:"lse(X^2 b) - c'X^2 b",steps:["(softmax(X^2 b) - c)'(dX Xb + X dX b)","tr(Xb(softmax(X^2 b) - c)'dX) + tr(b(softmax(X^2 b) - c)'X dX)"],ans:"(softmax(X^2 b) - c)b'X' + X'(softmax(X^2 b) - c)b'"},
  {w:["sig","prod","cyc"],L:8,v:'X',f:"sigma(a'X^2 b)",s:"sigma(a'X^2 b)",steps:["s(1 - s)(a'dX Xb + a'X dX b)","s(1 - s)(tr(Xba'dX) + tr(ba'X dX))"],ans:"s(1 - s)(ab'X' + X'ab')"},
- {w:["tanh","prod","cyc"],L:8,v:'X',f:"c'tanh(X tanh(Xa))",steps:["c'(I - diag(tanh(X tanh(Xa)))^2)(dX tanh(Xa) + X(I - diag(tanh(Xa))^2)dX a)","tr(tanh(Xa)c'(I - diag(tanh(X tanh(Xa)))^2)dX) + tr(ac'(I - diag(tanh(X tanh(Xa)))^2)X(I - diag(tanh(Xa))^2)dX)"],ans:"(I - diag(tanh(X tanh(Xa)))^2)c tanh(Xa)' + (I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)ca'"},
+ {w:["tanh","prod","cyc"],L:8,v:'X',shared:1,f:"c'tanh(X tanh(Xa))",g:[["Xa","(I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)c"],["tanh(Xa)","X'(I - diag(tanh(X tanh(Xa)))^2)c"],["X tanh(Xa)","(I - diag(tanh(X tanh(Xa)))^2)c"],["tanh(X tanh(Xa))","c"]],steps:["c'(I - diag(tanh(X tanh(Xa)))^2)(dX tanh(Xa) + X(I - diag(tanh(Xa))^2)dX a)","tr(tanh(Xa)c'(I - diag(tanh(X tanh(Xa)))^2)dX) + tr(ac'(I - diag(tanh(X tanh(Xa)))^2)X(I - diag(tanh(Xa))^2)dX)"],ans:"(I - diag(tanh(X tanh(Xa)))^2)c tanh(Xa)' + (I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)ca'"},
  // level 9 · reinforcement learning
  {w:["lse","sca"],L:9,v:'X',f:"c'Xa - lse(Xa)",steps:["c'dX a - softmax(Xa)'dX a","tr(a(c - softmax(Xa))'dX)"],ans:"(c - softmax(Xa))a'"},
  {w:["lse","collect"],L:9,v:'x',f:"c'Ax - lse(Ax)",steps:["c'A dx - softmax(Ax)'A dx","(c - softmax(Ax))'A dx"],pre:"((c - softmax(Ax))'A)'",ans:"A'(c - softmax(Ax))"},
@@ -504,7 +515,7 @@ const CUR=[
  {w:["lse","sca","norm"],L:9,v:'X',f:"c'Xa - lse(Xa) - 1/2 normF(X)^2",steps:["c'dX a - softmax(Xa)'dX a - tr(X'dX)","tr(a(c - softmax(Xa))'dX) - tr(X'dX)"],ans:"(c - softmax(Xa))a' - X"},
  {w:["lse", "sca"],L:4,v:'X',f:"lse(Xa) - b'Xa",steps:["(softmax(Xa) - b)'dX a","tr(a(softmax(Xa) - b)'dX)"],ans:"(softmax(Xa) - b)a'"},
 ];
-const CURP=CUR.map(c=>({w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
+const CURP=CUR.map(c=>({g:(c.g||[]).map(([e,d])=>[parse(e),parse(d)]),shared:!!c.shared,w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
   f:parse(c.f),ans:parse(c.ans),steps:c.steps.map(parse),pre:c.pre?parse(c.pre):null,cond:c.cond||null,s:c.s?parse(c.s):null}));
 
 /* ---------- generator: chain and product rule over simple bases ---------- */
@@ -621,6 +632,7 @@ function pickSpec(level){
   lastKey=R(s.f);return s;
 }
 function relHTML(c,m){const mm=c.match(/^(.*?)\s*(=|>)\s*(.*)$/);const side=x=>/^\d+$/.test(x.trim())?x.trim():R(ren(parse(x),m),true);return`${side(mm[1])} ${mm[2]} ${side(mm[3])}`}
+const addTerms=n=>n.k==='add'&&n.op==='+'?[...addTerms(n.a),...addTerms(n.b)]:[n];
 function buildRows(fA,stepsA,preA,ansA,w,g){
   const toks=[RT(fA,true),...stepsA.map(x=>RT(x))];
   const rows=stepsA.map((x,i)=>({lhs:i?'':'d<i>f</i>',h:hlDiff(toks[i],toks[i+1]),w:w[i]}));
@@ -651,7 +663,8 @@ function makeProblem(level){
     const sh=shuffle(opts);
     const cond=t.s?`<i>s</i> = ${R(sA)}`:t.cond?relHTML(t.cond,m):'';
     return{L:t.L,f:R(fA,true),vv:`<i>${m[t.v]}</i>`,dv:`d<i>${m[t.v]}</i>`,cond,ansH,envs,expected,opts:sh,ci:sh.indexOf(ansH),
-      rows:buildRows(fA,stepsA,preA,ansA,t.w,`∇<sub><i>${m[t.v]}</i></sub><i>f</i>`)};
+      rows:buildRows(fA,stepsA,preA,ansA,t.w,`∇<sub><i>${m[t.v]}</i></sub><i>f</i>`),
+      g:(t.g||[]).map(([e,d])=>[R(r(e)),R(r(d))]),gv:`<i>${m[t.v]}</i>`,terms:t.shared?addTerms(ansA).map(x=>R(x)):null};
   }
   throw new Error('no problem');
 }
@@ -854,7 +867,15 @@ function solHTML(m,idx){
   const g=`∇<sub>${m.vv}</sub><i>f</i>`;
   const rows=m.rows.map(r=>`<div class="row"><span class="l">${r.lhs}</span><span class="r${r.fin?' fin':''}">= ${r.h}</span><button class="tag" type="button">${RULES[r.w][0]}</button><span class="rule" hidden>${RULES[r.w][1]}</span></div>`).join('');
   return`<div class="item" data-i="${idx}"><div class="q"><span><i>f</i> = ${m.f}${m.cond?`<span class="c">${m.cond}</span>`:''}</span><span>${g} = ${m.ansH}</span></div>
-    <div class="btns"><button class="solb" type="button">solution</button><button class="stepb" type="button">step ▸</button></div><div class="sol">${rows}</div></div>`}
+    <div class="btns"><button class="solb" type="button">solution</button><button class="stepb" type="button">step ▸</button></div><div class="sol">${rows}${graphHTML(m)}</div></div>`}
+function graphHTML(m){
+  if(!m.g||!m.g.length)return'';
+  const nodes=[[m.gv,m.ansH],...m.g,['<i>f</i>','1']];
+  let h='<div class="gr"><div class="grh">computation graph &nbsp;·&nbsp; value on the left, gradient of <i>f</i> at that node on the right</div>';
+  nodes.forEach((n,i)=>{if(i)h+='<div class="ga">↓</div>';h+=`<div class="gnode${i===0?' gv':''}"><span>${n[0]}</span><span class="gb">${n[1]}</span></div>`});
+  if(m.terms&&m.terms.length>1)h+=`<div class="grs">${m.gv} is used at every step, so its gradient is the sum of one term per use:<div class="gnode"><span>${m.terms.join(' &nbsp;+&nbsp; ')}</span></div></div>`;
+  return h+'</div>'}
+function fitGraph(item){item.querySelectorAll('.gr .gnode').forEach(el=>{el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>el.clientWidth+1&&f>10){f-=.5;el.style.fontSize=f+'px'}})}
 let activeItem=null;
 function stepItem(item,dir){const rows=[...item.querySelectorAll('.row')];let n=+(item.dataset.n||rows.length);
   if(dir>0)n=n>=rows.length?1:n+1;else n=Math.max(1,n-1);
@@ -880,7 +901,7 @@ $('misses').addEventListener('click',e=>{
   const t=e.target.closest('.tag');if(t){const r=t.nextElementSibling;r.hidden=!r.hidden;return}
   const sb=e.target.closest('.solb');if(sb){const it=sb.closest('.item'),was=it.classList.contains('open');
     $('misses').querySelectorAll('.item.open').forEach(x=>{x.classList.remove('open');x.querySelector('.solb').textContent='solution'});
-    if(!was){it.classList.add('open');sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
+    if(!was){it.classList.add('open');fitGraph(it);sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
   const b=e.target.closest('.stepb');if(b){const it=b.closest('.item');if(!it.dataset.n)it.dataset.n=it.querySelectorAll('.row').length;stepItem(it,1)}});
 $('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
 $('start').addEventListener('click',start);$('again').addEventListener('click',start);
