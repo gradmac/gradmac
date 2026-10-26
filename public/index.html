@@ -83,11 +83,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .keys{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:440px}
 .keys button{min-width:46px;height:46px;padding:0 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:var(--f-math);font-size:18px;line-height:1}
 .keys button small{font:10px var(--f-num);color:var(--mute)}
-.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:520px}
-.o{display:flex;gap:10px;align-items:center;padding:12px;text-align:left;min-width:0}
-.o small{font:11px var(--f-num);color:var(--mute)}
-.o span{font-family:var(--f-math);font-size:20px;white-space:nowrap;min-width:0}
-.opts.wide{grid-template-columns:1fr;max-width:720px}
+.opts{display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:900px}
+.o{display:flex;gap:14px;align-items:center;padding:20px 22px;text-align:left;min-width:0}
+.o small{font:13px var(--f-num);color:var(--mute)}
+.o span{font-family:var(--f-math);font-size:22px;white-space:nowrap;min-width:0}
 .o.x{opacity:.3;cursor:default}
 .o.right{border-color:var(--fg);border-width:2px}
 .big{font-family:var(--f-num);font-size:72px;font-weight:600;line-height:1}
@@ -116,7 +115,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .rv .c i,.sol i{font-family:var(--f-var);font-style:italic}
 .shake{animation:sh .22s}@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){.shake{animation:none}}
-@media (max-width:480px){.opts{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -795,7 +794,7 @@ function render(p){
     h+=`<div class="eqrow" style="justify-content:center"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} = ?</span></div><div class="opts${p.opts.some(o=>o.replace(/<[^>]+>/g,'').length>20)?' wide':''}">${p.opts.map((o,i)=>`<button class="o" data-i="${i}"><small>${i+1}</small><span>${o}</span></button>`).join('')}</div>`;
   }
   box.innerHTML=h;
-  box.querySelectorAll('.o span').forEach(sp=>{let f=20;while(sp.scrollWidth>sp.clientWidth+1&&f>10){f--;sp.style.fontSize=f+'px'}});
+  box.querySelectorAll('.o span').forEach(sp=>{let f=22;while(sp.scrollWidth>sp.clientWidth+1&&f>11){f--;sp.style.fontSize=f+'px'}});
   if(mode==='type'){
     const inp=$('ans');inp.focus();
     const test=()=>{if(check(p,inp.value).ok)solved()};
