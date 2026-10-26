@@ -29,6 +29,8 @@ img{max-width:100%}
 html,body{min-height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.logo{cursor:pointer}
+.foot{text-align:center;font-size:13px;color:var(--mute);padding:8px 0 28px}.foot a{color:inherit}.foot span{margin:0 6px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
 header{display:flex;justify-content:space-between;align-items:center}
 .logo{height:34px;width:auto;display:block;color:var(--fg)}
@@ -95,11 +97,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .sub{font-family:var(--f-num);font-size:13px;color:var(--mute)}
 .rv{width:100%;font-family:var(--f-math);font-size:17px}
 .rv .item{padding:10px 0;border-top:1px solid var(--line);display:grid;gap:8px}
-.rv .q{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px}
+.rv .q{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.rv .q>span{white-space:nowrap;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.sol .r{white-space:nowrap;overflow-x:auto;scrollbar-width:none}.sol .r::-webkit-scrollbar,.rv .q>span::-webkit-scrollbar,.gnode::-webkit-scrollbar{display:none}.sol .l{white-space:nowrap}
 .rv .c{color:var(--mute);font-size:.82em;margin-left:10px}
 .sol{display:none;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:16px;line-height:1.6;color:var(--mute);padding-left:12px}
 .sol span{min-width:0;overflow-wrap:anywhere}
 .sol{grid-template-columns:auto minmax(0,1fr) auto}
+@media (max-width:560px){.sol{grid-template-columns:auto minmax(0,1fr)}.sol .tag{grid-column:2;justify-self:start;margin-bottom:4px}}
 .sol .row{display:contents}
 .sol .l{text-align:right;color:var(--fg)}
 .sol .r.fin{color:var(--fg)}
@@ -108,7 +113,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .tag:hover{color:var(--fg);border-color:var(--fg)}
 .gr{grid-column:1/-1;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);color:var(--fg);font-size:16px}
 .gr .grh{font:12px var(--f-ui);color:var(--mute);margin-bottom:8px}
-.gnode{display:flex;justify-content:space-between;gap:24px;white-space:nowrap;overflow:hidden;font-family:var(--f-math);padding:6px 10px;border:1px solid var(--line);border-radius:8px}
+.gnode{display:flex;justify-content:space-between;gap:24px;white-space:nowrap;overflow-x:auto;scrollbar-width:none;font-family:var(--f-math);padding:6px 10px;border:1px solid var(--line);border-radius:8px}
 .gnode.gv{border-color:var(--fg)}
 .gnode .gb{color:var(--mute)}
 .gnode i,.gr i{font-family:var(--f-var);font-style:italic}
@@ -130,7 +135,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 </head>
 <body>
 <div class="wrap">
-  <header><svg class="logo" viewBox="0 0 258 42" role="img" aria-label="gradient goat" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <header><svg class="logo" id="logo" tabindex="0" viewBox="0 0 258 42" role="link" aria-label="gradient goat, back to the start" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M10 15C8.5 8.5 4.5 5 1.5 6.5" />
     <path d="M24 15C25.5 8.5 29.5 5 32.5 6.5" />
     <path d="M6 15H28L17 36Z" stroke-linejoin="miter"/>
@@ -173,8 +178,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <button id="solbtn" hidden></button>
     <div class="rv" id="misses"></div>
   </section>
+  <footer class="foot">get goated at backprop <span>·</span> <a href="/privacy">privacy</a></footer>
 </div>
-
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
@@ -875,20 +880,28 @@ function graphHTML(m){
   nodes.forEach((n,i)=>{if(i)h+='<div class="ga">↓</div>';h+=`<div class="gnode${i===0?' gv':''}"><span>${n[0]}</span><span class="gb">${n[1]}</span></div>`});
   if(m.terms&&m.terms.length>1)h+=`<div class="grs">${m.gv} is used at every step, so its gradient is the sum of one term per use:<div class="gnode"><span>${m.terms.join(' &nbsp;+&nbsp; ')}</span></div></div>`;
   return h+'</div>'}
+function fitEl(el,bad,min=11){el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize);if(!f)return;while(bad(el)&&f>min){f-=.5;el.style.fontSize=f+'px'}}
+function fitItem(item){
+  item.querySelectorAll('.q>span').forEach(el=>fitEl(el,e=>e.scrollWidth>e.clientWidth+1));
+  const sol=item.querySelector('.sol');
+  if(sol&&getComputedStyle(sol).display!=='none')fitEl(sol,e=>[...e.querySelectorAll('.r')].some(r=>r.scrollWidth>r.clientWidth+1));
+  fitGraph(item)}
+function fitAll(){document.querySelectorAll('#misses .item').forEach(fitItem)}
+addEventListener('resize',()=>{clearTimeout(window.__ft);window.__ft=setTimeout(fitAll,120)});
 function fitGraph(item){item.querySelectorAll('.gr .gnode').forEach(el=>{el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>el.clientWidth+1&&f>10){f-=.5;el.style.fontSize=f+'px'}})}
 let activeItem=null;
 function stepItem(item,dir){const rows=[...item.querySelectorAll('.row')];let n=+(item.dataset.n||rows.length);
   if(dir>0)n=n>=rows.length?1:n+1;else n=Math.max(1,n-1);
   item.dataset.n=n;rows.forEach((r,i)=>r.hidden=i>=n);
   item.querySelector('.stepb').textContent=n>=rows.length?'replay ↺':'next ▸';activeItem=item}
-function syncSol(){$('misses').classList.toggle('show',showSol);$('solbtn').setAttribute('aria-pressed',showSol)}
+function syncSol(){$('misses').classList.toggle('show',showSol);$('solbtn').setAttribute('aria-pressed',showSol);if(showSol)requestAnimationFrame(fitAll)}
 function finish(complete){
   cancelAnimationFrame(st.raf);const s=st;st=null;document.querySelector('header').classList.remove('running');sand(complete?0:1);
   if(!complete){$('play').hidden=true;$('setup').hidden=false;syncChips();return}
   const key=bestKey(),prev=s.best;if(s.score>prev)store.set(key,s.score);
   $('play').hidden=true;$('done').hidden=false;$('final').textContent=s.score;
   $('stats').textContent=`best ${Math.max(prev,s.score)}`+(s.times.length?` · ${(s.times.reduce((a,b)=>a+b,0)/s.times.length/1000).toFixed(1)} s each`:'');
-  $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;
+  $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;requestAnimationFrame(fitAll);
   lastRun={token:s.token||null,score:s.score,board:board(),tries:0};
   $('postbtn').hidden=!(lastRun.token&&s.score>0);$('postmsg').textContent='';renderPostBtn();
   loadBoard($('lb2'));
@@ -901,7 +914,7 @@ $('misses').addEventListener('click',e=>{
   const t=e.target.closest('.tag');if(t){const r=t.nextElementSibling;r.hidden=!r.hidden;return}
   const sb=e.target.closest('.solb');if(sb){const it=sb.closest('.item'),was=it.classList.contains('open');
     $('misses').querySelectorAll('.item.open').forEach(x=>{x.classList.remove('open');x.querySelector('.solb').textContent='solution'});
-    if(!was){it.classList.add('open');fitGraph(it);sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
+    if(!was){it.classList.add('open');sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);requestAnimationFrame(()=>fitItem(it));it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
   const b=e.target.closest('.stepb');if(b){const it=b.closest('.item');if(!it.dataset.n)it.dataset.n=it.querySelectorAll('.row').length;stepItem(it,1)}});
 $('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
 $('start').addEventListener('click',start);$('again').addEventListener('click',start);
@@ -916,6 +929,8 @@ async function postScore(){
     $('postmsg').textContent=j.error||'could not post'}
   catch(e){$('postmsg').textContent='could not reach the leaderboard'}}
 $('postbtn').addEventListener('click',postScore);
+function home(){if(!$('panel').hidden)closePanel();if(st)return finish(false);if(!$('done').hidden){$('back').click();return}window.scrollTo(0,0)}
+$('logo').addEventListener('click',home);$('logo').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();home()}});
 $('back').addEventListener('click',()=>{sand(1);$('done').hidden=true;$('setup').hidden=false;syncChips()});
 document.addEventListener('keydown',e=>{
   if(!$('panel').hidden){if(e.key==='Escape')closePanel();return}
