@@ -70,6 +70,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .go{background:var(--fg);color:var(--bg);border-color:var(--fg);padding:10px 28px;font-size:15px;font-weight:600}
 .top{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;color:var(--mute)}
 .top b{color:var(--fg);font-weight:600}
+.math.q{white-space:nowrap;overflow:hidden}
 .math{font-family:var(--f-math);font-size:clamp(24px,5vw,32px);text-align:center;line-height:1.5}
 .math i,.o i,.rv i,.cond i{font-family:var(--f-var);font-style:italic}
 .math sup,.math sub,.o sup,.o sub,.rv sup,.rv sub{font-size:.62em;line-height:0}
@@ -785,7 +786,7 @@ function syncChips(){
 }
 function render(p){
   const box=$('prob');
-  let h=`<div class="math">${I('f')}(${p.vv}) = ${p.f}</div>`;
+  let h=`<div class="math q">${I('f')}(${p.vv}) = ${p.f}</div>`;
   if(p.cond)h+=`<div class="cond">${p.cond}</div>`;
   if(mode==='type'){
     h+=`<div class="eqrow"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} =</span><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Gradient"></div>
@@ -794,6 +795,7 @@ function render(p){
     h+=`<div class="eqrow" style="justify-content:center"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} = ?</span></div><div class="opts${p.opts.some(o=>o.replace(/<[^>]+>/g,'').length>20)?' wide':''}">${p.opts.map((o,i)=>`<button class="o" data-i="${i}"><small>${i+1}</small><span>${o}</span></button>`).join('')}</div>`;
   }
   box.innerHTML=h;
+  const q=box.querySelector('.q');if(q){const base=parseFloat(getComputedStyle(q).fontSize);let f=base;while(q.scrollWidth>q.clientWidth+1&&f>12){f-=1;q.style.fontSize=f+'px'}}
   box.querySelectorAll('.o span').forEach(sp=>{let f=22;while(sp.scrollWidth>sp.clientWidth+1&&f>11){f--;sp.style.fontSize=f+'px'}});
   if(mode==='type'){
     const inp=$('ans');inp.focus();
