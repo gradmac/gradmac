@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>gradmac</title>
+<meta name="description" content="Zetamac for matrix calculus. Type the gradient against the clock.">
+<meta property="og:title" content="gradmac">
+<meta property="og:description" content="Zetamac for matrix calculus. Type the gradient against the clock.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Cpath d='M5 8h22L16 27z' fill='none' stroke='%23fff' stroke-width='3' stroke-linejoin='miter'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/source-code-pro-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Source Code Pro";src:url(fonts/source-code-pro-latin-400-normal.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Source Code Pro";src:url(fonts/source-code-pro-latin-600-normal.woff2) format("woff2");font-weight:500 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Source Code Pro";src:url(fonts/source-code-pro-latin-400-italic.woff2) format("woff2");font-weight:400 700;font-style:italic;font-display:swap}
+*,*::before,*::after{box-sizing:border-box}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: one narrow centered column, black on white or white on black, nothing else. */
+:root{--bg:#fff;--fg:#000;--mute:#8a8a8a;--line:#d6d6d6;
+  --f-math:"Source Code Pro",ui-monospace,Menlo,Consolas,monospace;--f-var:"Source Code Pro",ui-monospace,Menlo,Consolas,monospace;
+  --f-ui:"Source Code Pro",ui-monospace,Menlo,Consolas,monospace;
+  --f-num:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#000;--fg:#fff;--mute:#7a7a7a;--line:#333;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--fg:#fff;--mute:#7a7a7a;--line:#333;color-scheme:dark}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;justify-content:space-between;align-items:center}
+.logo{height:30px;width:auto;display:block;color:var(--fg)}
+#stream{opacity:0}.running #stream{opacity:1;animation:fall .5s linear infinite}
+@keyframes fall{to{stroke-dashoffset:-3}}
+@media (prefers-reduced-motion:reduce){.running #stream{animation:none}}
+button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+#theme,#font{height:34px;min-width:34px;font-size:16px;border:0}
+#font{font-family:var(--f-math);font-size:15px;padding:0 8px}
+.tools{display:flex;gap:4px}
+.col{display:flex;flex-direction:column;gap:18px;align-items:center}
+.seg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.seg button{padding:8px 14px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.lvlhint{font-family:var(--f-math);font-size:16px;color:var(--mute);min-height:24px;text-align:center;margin-top:-8px}
+.lvlhint i{font-family:var(--f-var);font-style:italic}.lvlhint sup,.lvlhint sub{font-size:.62em;line-height:0}
+.go{background:var(--fg);color:var(--bg);border-color:var(--fg);padding:10px 28px;font-size:15px;font-weight:600}
+.top{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;color:var(--mute)}
+.top b{color:var(--fg);font-weight:600}
+.math{font-family:var(--f-math);font-size:clamp(24px,5vw,32px);text-align:center;line-height:1.5}
+.math i,.o i,.rv i,.cond i{font-family:var(--f-var);font-style:italic}
+.math sup,.math sub,.o sup,.o sub,.rv sup,.rv sub{font-size:.62em;line-height:0}
+.cond{font-family:var(--f-math);font-size:16px;color:var(--mute);text-align:center}
+.cond sup{font-size:.62em;line-height:0}
+.prob{display:flex;flex-direction:column;gap:22px;align-items:center;min-height:300px;justify-content:center}
+.eqrow{display:flex;align-items:baseline;gap:12px;width:100%;max-width:480px}
+.lhs{flex:none;font-size:26px}
+#ans{flex:1;min-width:0;font:26px var(--f-math);text-align:left;color:var(--fg);background:transparent;border:0;border-bottom:1.5px solid var(--fg);padding:6px 4px;border-radius:0}
+#ans:focus-visible{outline:none}
+.keys{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:440px}
+.keys button{min-width:46px;height:46px;padding:0 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:var(--f-math);font-size:18px;line-height:1}
+.keys button small{font:10px var(--f-num);color:var(--mute)}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:520px}
+.o{display:flex;gap:10px;align-items:center;padding:12px;text-align:left;min-width:0}
+.o small{font:11px var(--f-num);color:var(--mute)}
+.o span{font-family:var(--f-math);font-size:20px;overflow-wrap:anywhere;min-width:0}
+.o.x{opacity:.3;cursor:default}
+.o.right{border-color:var(--fg);border-width:2px}
+.big{font-family:var(--f-num);font-size:72px;font-weight:600;line-height:1}
+.sub{font-family:var(--f-num);font-size:13px;color:var(--mute)}
+.rv{width:100%;font-family:var(--f-math);font-size:17px}
+.rv .item{padding:10px 0;border-top:1px solid var(--line);display:grid;gap:8px}
+.rv .q{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px}
+.rv .c{color:var(--mute);font-size:.82em;margin-left:10px}
+.sol{display:none;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:16px;line-height:1.6;color:var(--mute);padding-left:12px}
+.sol span{min-width:0;overflow-wrap:anywhere}
+.sol{grid-template-columns:auto minmax(0,1fr) auto}
+.sol .row{display:contents}
+.sol .l{text-align:right;color:var(--fg)}
+.sol .r.fin{color:var(--fg)}
+.hl{color:var(--fg)}
+.tag{font:11px var(--f-ui);color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:1px 8px;align-self:center;justify-self:end;white-space:nowrap}
+.tag:hover{color:var(--fg);border-color:var(--fg)}
+.sol .rule{grid-column:2/-1;font-size:14px;color:var(--fg);padding:0 0 6px}
+.stepb{font:12px var(--f-ui);padding:4px 10px;display:none}
+.item.open .stepb{display:inline-block}
+.rv .item.open .sol{display:grid}
+.btns{display:flex;gap:6px}
+.solb{font:12px var(--f-ui);padding:4px 10px}
+.item.open .solb{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tog{padding:6px 12px;font-size:13px}.tog[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.rv .c i,.sol i{font-family:var(--f-var);font-style:italic}
+.shake{animation:sh .22s}@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+@media (max-width:480px){.opts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><svg class="logo" viewBox="0 0 82 36" role="img" aria-label="gradmac" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 9H25L14 31Z" stroke-linejoin="miter"/>
+    <path d="M4.6 10.2L14 29.6" stroke-width="4.2" stroke-linecap="butt"/>
+    <path transform="translate(30.5 30) scale(0.02783)" fill="currentColor" stroke="none" d="M46 0V-491H135L144 -429H147Q163 -461 188.0 -482.0Q213 -503 256 -503Q290 -503 313.0 -482.5Q336 -462 345 -421Q362 -457 388.0 -480.0Q414 -503 457 -503Q509 -503 537.5 -462.5Q566 -422 566 -348V0H455V-340Q455 -405 416 -405Q396 -405 382.5 -390.0Q369 -375 354 -343V0H258V-340Q258 -372 249.0 -388.5Q240 -405 219 -405Q200 -405 186.0 -390.0Q172 -375 158 -343V0Z M835 12Q787 12 750.0 -6.5Q713 -25 692.0 -57.0Q671 -89 671 -132Q671 -214 749.5 -257.5Q828 -301 1010 -314Q1008 -341 995.5 -363.0Q983 -385 958.0 -397.5Q933 -410 893 -410Q865 -410 838.0 -403.0Q811 -396 784.5 -384.0Q758 -372 732 -358L690 -435Q720 -453 756.0 -468.5Q792 -484 832.0 -493.5Q872 -503 914 -503Q983 -503 1029.5 -478.5Q1076 -454 1100.5 -406.5Q1125 -359 1125 -291V0H1031L1022 -61H1019Q980 -31 932.5 -9.5Q885 12 835 12ZM870 -78Q907 -78 941.5 -94.5Q976 -111 1010 -138V-242Q922 -236 872.0 -222.5Q822 -209 802.0 -188.0Q782 -167 782 -141Q782 -119 794.0 -105.0Q806 -91 825.5 -84.5Q845 -78 870 -78Z M1544 12Q1467 12 1405.5 -18.5Q1344 -49 1308.5 -106.5Q1273 -164 1273 -245Q1273 -327 1311.5 -384.5Q1350 -442 1414.0 -472.5Q1478 -503 1552 -503Q1612 -503 1658.0 -483.5Q1704 -464 1734 -434L1679 -362Q1650 -385 1620.5 -397.0Q1591 -409 1558 -409Q1509 -409 1471.5 -388.5Q1434 -368 1413.0 -331.0Q1392 -294 1392 -245Q1392 -196 1412.5 -159.0Q1433 -122 1469.5 -102.0Q1506 -82 1555 -82Q1597 -82 1632.0 -98.0Q1667 -114 1695 -136L1743 -62Q1701 -26 1649.0 -7.0Q1597 12 1544 12Z"/>
+  </svg><div class="tools"><button id="theme" aria-label="Toggle dark mode">◐</button></div></header>
+
+  <section id="setup" class="col">
+    <div class="seg" id="modes"><button data-mode="type" id="m-type">type</button><button data-mode="mc" id="m-mc">choice</button></div>
+    <div class="seg" id="lvls"><button data-l="1" id="l-1">linear</button><button data-l="2" id="l-2">quadratic</button><button data-l="3" id="l-3">inverse</button><button data-l="4" id="l-4">chain</button><button data-l="all" id="l-all">mixed</button></div>
+    <div class="lvlhint" id="lvlhint"></div>
+    <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
+    <button class="go" id="start">start</button>
+    <div class="sub" id="mbest"></div>
+  </section>
+
+  <section id="play" hidden>
+    <div class="top"><span><b id="secs">120</b> s</span><span>best <b id="pbest">0</b></span><span>score <b id="score">0</b></span></div>
+    <div class="prob" id="prob"></div>
+  </section>
+
+  <section id="done" class="col" hidden>
+    <div class="big" id="final">0</div>
+    <div class="sub" id="stats"></div>
+    <div class="seg"><button class="go" id="again">again</button><button id="back" style="padding:10px 18px">menu</button></div>
+    <button id="solbtn" hidden></button>
+    <div class="rv" id="misses"></div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const I=s=>`<i>${s}</i>`;
+/* ---------- tokenizer + parser ---------- */
+const FUNCS=['softmax','normF','sigma','norm','det','exp','log','lse','inv','tr'];
+function tokenize(s){
+  s=s.replace(/[−–]/g,'-').replace(/⁻ᵀ/g,'^-T').replace(/⁻¹/g,'^-1').replace(/²/g,'^2').replace(/³/g,'^3').replace(/[ᵀ⊤]/g,'^T')
+     .replace(/[‖|]([^‖|]*)[‖|]/g,'norm($1)').replace(/σ/g,'sigma').replace(/[·×]/g,'*').replace(/½/g,'(1/2)');
+  const t=[];let i=0;
+  while(i<s.length){
+    const c=s[i];
+    if(/\s/.test(c)){i++;continue}
+    if(/[0-9.]/.test(c)){const m=s.slice(i).match(/^(\d+\.?\d*|\.\d+)/);if(!m)throw 0;t.push({t:'num',v:+m[0]});i+=m[0].length;continue}
+    if(/[A-Za-z]/.test(c)){
+      const f=FUNCS.find(fn=>s.startsWith(fn,i)&&/^\s*\(/.test(s.slice(i+fn.length)));
+      if(f){t.push({t:'fn',v:f});i+=f.length;continue}
+      if(c==='d'&&/[A-Za-z]/.test(s[i+1]||'')){t.push({t:'var',v:'d'+s[i+1]});i+=2;continue}
+      t.push({t:'var',v:c});i++;continue}
+    if(c==='^'){i++;while(s[i]===' ')i++;let neg=false;if(s[i]==='-'){neg=true;i++}
+      if(s[i]==='T'||s[i]==='t'){t.push({t:'post',v:neg?'invT':'T'});i++;continue}
+      const m=s.slice(i).match(/^\d+/);if(!m)throw 0;const k=+m[0];i+=m[0].length;
+      if(neg){if(k!==1)throw 0;t.push({t:'post',v:'inv'})}else t.push({t:'post',v:'pow',k});continue}
+    if(c==="'"){t.push({t:'post',v:'T'});i++;continue}
+    if('+-*/()'.includes(c)){t.push({t:c});i++;continue}
+    throw 0;
+  }
+  return t;
+}
+function parse(src){
+  const T=tokenize(src);let p=0;
+  const peek=()=>T[p],eat=x=>{if(!T[p]||T[p].t!==x)throw 0;return T[p++]};
+  const startsAtom=k=>k&&(k.t==='num'||k.t==='var'||k.t==='fn'||k.t==='(');
+  function expr(){let n=term();while(peek()&&(peek().t==='+'||peek().t==='-')){const op=T[p++].t;n={k:'add',op,a:n,b:term()}}return n}
+  function term(){let n=unary();for(;;){const k=peek();
+    if(k&&k.t==='*'){p++;n={k:'mul',a:n,b:unary()}}
+    else if(k&&k.t==='/'){p++;n={k:'div',a:n,b:unary()}}
+    else if(startsAtom(k)){n={k:'mul',a:n,b:power()}}
+    else return n}}
+  function unary(){const k=peek();if(k&&k.t==='-'){p++;return{k:'neg',a:unary()}}if(k&&k.t==='+'){p++;return unary()}return power()}
+  function power(){let n=atom();while(peek()&&peek().t==='post'){const q=T[p++];n={k:'post',v:q.v,n:q.k,a:n}}return n}
+  function atom(){const k=T[p++];if(!k)throw 0;
+    if(k.t==='num')return{k:'num',v:k.v};
+    if(k.t==='var')return{k:'var',v:k.v};
+    if(k.t==='fn'){eat('(');const a=expr();eat(')');return{k:'fn',f:k.v,a}}
+    if(k.t==='('){const a=expr();eat(')');return{k:'par',a}}
+    throw 0}
+  const n=expr();if(p!==T.length)throw 0;return n;
+}
+const ren=(n,m)=>{if(n.k==='var'){const v=n.v;if(v.length===2&&v[0]==='d')return{...n,v:'d'+(m[v[1]]||v[1])};return{...n,v:m[v]||v}}
+  const o={...n};if(n.a)o.a=ren(n.a,m);if(n.b)o.b=ren(n.b,m);return o};
+const varsOf=(n,s=new Set())=>{if(n.k==='var')s.add(n.v);if(n.a)varsOf(n.a,s);if(n.b)varsOf(n.b,s);return s};
+
+/* AST builders */
+const A_={num:v=>({k:'num',v}),mul:(a,b)=>({k:'mul',a,b}),add:(a,b,op='+')=>({k:'add',op,a,b}),div:(a,b)=>({k:'div',a,b}),
+  fn:(f,a)=>({k:'fn',f,a}),par:a=>({k:'par',a}),pow:(a,n)=>({k:'post',v:'pow',n,a}),T:a=>({k:'post',v:'T',a})};
+const atomic=n=>n.k==='var'||n.k==='num'||n.k==='fn'||n.k==='par'||(n.k==='post'&&atomic(n.a));
+const paren=n=>atomic(n)?n:A_.par(n);
+const parenAdd=n=>(n.k==='add'||n.k==='neg')?A_.par(n):n;
+function splitCoef(n){if(n.k==='num')return[n.v,null];if(n.k==='mul'){const[c,r]=splitCoef(n.a);if(c!==null)return[c,r?A_.mul(r,n.b):n.b]}return[null,n]}
+/* s·g with any leading number of g pulled to the front */
+function scal(s,g,k=1){const[c,rest]=splitCoef(g);const coef=(c??1)*k;const body=A_.mul(s,parenAdd(rest||g));
+  if(c!==null&&!rest)return coef===1?s:A_.mul(A_.num(coef),s);
+  return coef===1?body:A_.mul(A_.num(coef),body)}
+
+/* ---------- render AST to math HTML ---------- */
+const lead=n=>(n.k==='mul'||n.k==='div'||n.k==='add'||n.k==='post')?lead(n.a):n;
+const isD=x=>x.k==='var'&&x.v.length===2&&x.v[0]==='d';
+const tk=(k,h)=>({k,h:h??k});
+function RT(n,top){switch(n.k){
+  case'num':return[tk('n'+n.v,String(n.v))];
+  case'var':return[tk('v'+n.v,isD(n)?`d<i>${n.v[1]}</i>`:`<i>${n.v}</i>`)];
+  case'neg':return[tk('−'),...RT(n.a)];
+  case'add':return[...RT(n.a),tk(n.op,` ${n.op==='+'?'+':'−'} `),...RT(n.b)];
+  case'mul':{const l=lead(n.b),tl=x=>x.k==='mul'?tl(x.b):x;
+    let sep=l.k==='num'?' · ':(l.k==='fn'&&['tr','det','log','exp','softmax'].includes(l.f))||isD(l)||isD(tl(n.a))?' ':'';
+    return[...RT(n.a),...(sep?[tk('_',sep)]:[]),...RT(n.b)]}
+  case'div':if(n.a.k==='num'&&n.b.k==='num'&&n.a.v===1&&n.b.v===2)return[tk('½')];return[...RT(n.a),tk('/',' / '),...RT(n.b)];
+  case'par':return[tk('('),...RT(n.a),tk(')')];
+  case'post':return[...RT(n.a),tk('^'+n.v+(n.n||''),{T:'<sup>⊤</sup>',inv:'<sup>−1</sup>',invT:'<sup>−⊤</sup>'}[n.v]||`<sup>${n.n}</sup>`)];
+  case'fn':{const a=n.a;
+    if(n.f==='norm')return[tk('‖'),...RT(a),tk('‖')];
+    if(n.f==='normF')return[tk('‖'),...RT(a),tk('‖F','‖<sub>F</sub>')];
+    if(n.f==='sigma')return[tk('σ('),...RT(a),tk(')')];
+    if(n.f==='inv')return[tk('('),...RT(a),tk(')'),tk('^inv','<sup>−1</sup>')];
+    if(n.f==='lse')return[tk('lse(','log Σ<sub><i>i</i></sub> exp('),...RT(a),tk('lse)','<sub><i>i</i></sub>)')];
+    if(n.f==='log'&&a.k==='fn'&&a.f==='det'&&(a.a.k==='var'||a.a.k==='par'))return[tk('logdet',`log det${a.a.k==='var'?' ':''}`),...RT(a.a)];
+    if(top&&n.f==='det'&&a.k==='var')return[tk('det ','det '),...RT(a)];
+    return[tk(n.f+'(',n.f+'('),...RT(a),tk(')')]}
+}}
+const R=(n,top)=>RT(n,top).map(t=>t.h).join('');
+/* tokens of cur that are not in the longest common subsequence with prev get highlighted */
+function hlDiff(prev,cur){const n=prev.length,m=cur.length,L=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=prev[i].k===cur[j].k?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const keep=new Array(m).fill(false);let i=0,j=0;while(i<n&&j<m){if(prev[i].k===cur[j].k){keep[j]=true;i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  let h='',open=false;cur.forEach((t,j)=>{const mark=!keep[j]&&t.k!=='_';if(mark&&!open){h+='<span class="hl">';open=true}if(!mark&&open&&t.k!=='_'){h+='</span>';open=false}h+=t.h});if(open)h+='</span>';return h}
+const RULES={
+ lin:['linearity','d tr(<i>P</i>) = tr(d<i>P</i>), &nbsp;d(<i>a</i><sup>⊤</sup><i>P</i><i>b</i>) = <i>a</i><sup>⊤</sup>d<i>P</i> <i>b</i>'],
+ prod:['product rule','d(<i>PQ</i>) = d<i>P</i> <i>Q</i> + <i>P</i> d<i>Q</i>'],
+ cyc:['cycle the trace','tr(<i>PQR</i>) = tr(<i>RPQ</i>)'],
+ trT:['transpose a scalar','tr(<i>P</i>) = tr(<i>P</i><sup>⊤</sup>), &nbsp;<i>a</i><sup>⊤</sup><i>b</i> = <i>b</i><sup>⊤</sup><i>a</i>'],
+ sca:['scalar as a trace','<i>a</i><sup>⊤</sup><i>P</i><i>b</i> = tr(<i>b</i><i>a</i><sup>⊤</sup><i>P</i>)'],
+ collect:['collect terms','tr(<i>P</i> d<i>X</i>) + tr(<i>Q</i> d<i>X</i>) = tr((<i>P</i> + <i>Q</i>) d<i>X</i>)'],
+ eye:['identity','d<i>X</i> = <i>I</i> d<i>X</i>'],
+ sym:['symmetric','<i>A</i> = <i>A</i><sup>⊤</sup>, so <i>x</i><sup>⊤</sup>(<i>A</i> + <i>A</i><sup>⊤</sup>) = 2<i>x</i><sup>⊤</sup><i>A</i>'],
+ norm:['squared norm','d‖<i>v</i>‖<sup>2</sup> = 2<i>v</i><sup>⊤</sup>d<i>v</i>, &nbsp;d‖<i>V</i>‖<sub>F</sub><sup>2</sup> = 2 tr(<i>V</i><sup>⊤</sup>d<i>V</i>)'],
+ normr:['norm','d‖<i>v</i>‖ = <i>v</i><sup>⊤</sup>d<i>v</i> / ‖<i>v</i>‖'],
+ inv:['inverse','d(<i>X</i><sup>−1</sup>) = −<i>X</i><sup>−1</sup> d<i>X</i> <i>X</i><sup>−1</sup>'],
+ invp:['inverse of a product','(<i>PQ</i>)<sup>−1</sup> = <i>Q</i><sup>−1</sup><i>P</i><sup>−1</sup>'],
+ det:['determinant','d det <i>X</i> = det <i>X</i> · tr(<i>X</i><sup>−1</sup>d<i>X</i>)'],
+ logdet:['log det','d log det <i>X</i> = tr(<i>X</i><sup>−1</sup>d<i>X</i>)'],
+ chain:['chain rule','d(<i>u</i><sup>2</sup>) = 2<i>u</i> d<i>u</i>'],
+ exp:['exp','d exp(<i>u</i>) = exp(<i>u</i>) d<i>u</i>'],
+ log:['log','d log <i>u</i> = d<i>u</i> / <i>u</i>'],
+ lse:['log-sum-exp','d lse(<i>v</i>) = softmax(<i>v</i>)<sup>⊤</sup>d<i>v</i>'],
+ sig:['sigmoid','dσ(<i>u</i>) = σ(1 − σ) d<i>u</i>'],
+ softplus:['softplus','d log(1 + e<sup><i>u</i></sup>) = σ(<i>u</i>) d<i>u</i>'],
+ quot:['quotient','d(<i>u</i>/<i>v</i>) = d<i>u</i>/<i>v</i> − <i>u</i> d<i>v</i>/<i>v</i><sup>2</sup>'],
+ read:['read off','d<i>f</i> = tr(<i>G</i> d<i>X</i>) ⇒ ∇<i>f</i> = <i>G</i><sup>⊤</sup>; &nbsp;d<i>f</i> = <i>g</i><sup>⊤</sup>d<i>x</i> ⇒ ∇<i>f</i> = <i>g</i>'],
+ tpp:['transpose a product','(<i>PQ</i>)<sup>⊤</sup> = <i>Q</i><sup>⊤</sup><i>P</i><sup>⊤</sup>'],
+};
+/* ---------- numeric evaluation ---------- */
+const N=3;
+const M=(r,c,d)=>({r,c,d});
+const S=v=>M(1,1,[v]);
+const isS=m=>m.r===1&&m.c===1;
+const eye=()=>M(N,N,Array.from({length:N*N},(_,i)=>i%(N+1)===0?1:0));
+const rnd=()=>Math.random()*2-1;
+function randM(sym){const d=Array.from({length:N*N},rnd);if(sym)for(let i=0;i<N;i++)for(let j=0;j<i;j++)d[i*N+j]=d[j*N+i];for(let i=0;i<N;i++)d[i*N+i]+=1.5;return M(N,N,d)}
+const randV=()=>M(N,1,Array.from({length:N},rnd));
+const tp=a=>{const d=[];for(let j=0;j<a.c;j++)for(let i=0;i<a.r;i++)d.push(a.d[i*a.c+j]);return M(a.c,a.r,d)};
+const scale=(k,a)=>M(a.r,a.c,a.d.map(v=>v*k));
+function addM(a,b,s){if(a.r!==b.r||a.c!==b.c)throw 0;return M(a.r,a.c,a.d.map((v,i)=>v+s*b.d[i]))}
+function mulM(a,b){if(isS(a))return scale(a.d[0],b);if(isS(b))return scale(b.d[0],a);if(a.c!==b.r)throw 0;
+  const d=new Array(a.r*b.c).fill(0);for(let i=0;i<a.r;i++)for(let k=0;k<a.c;k++)for(let j=0;j<b.c;j++)d[i*b.c+j]+=a.d[i*a.c+k]*b.d[k*b.c+j];return M(a.r,b.c,d)}
+function invM(a){if(a.r!==a.c)throw 0;if(isS(a))return S(1/a.d[0]);const n=a.r,A=[];for(let i=0;i<n;i++)A.push([...a.d.slice(i*n,i*n+n),...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];const v=A[c][c];if(Math.abs(v)<1e-12)throw 0;
+    for(let j=0;j<2*n;j++)A[c][j]/=v;for(let r=0;r<n;r++)if(r!==c){const f=A[r][c];for(let j=0;j<2*n;j++)A[r][j]-=f*A[c][j]}}
+  return M(n,n,A.flatMap(r=>r.slice(n)))}
+function detM(a){if(a.r!==a.c)throw 0;const n=a.r,A=[];for(let i=0;i<n;i++)A.push(a.d.slice(i*n,i*n+n));let det=1;
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;if(p!==c){[A[c],A[p]]=[A[p],A[c]];det=-det}
+    if(Math.abs(A[c][c])<1e-14)return 0;det*=A[c][c];for(let r=c+1;r<n;r++){const f=A[r][c]/A[c][c];for(let j=c;j<n;j++)A[r][j]-=f*A[c][j]}}return det}
+const ew=(a,f)=>M(a.r,a.c,a.d.map(f));
+function E(n,env){switch(n.k){
+  case'num':return S(n.v);
+  case'var':if(!(n.v in env))throw 0;return env[n.v];
+  case'neg':return scale(-1,E(n.a,env));
+  case'add':return addM(E(n.a,env),E(n.b,env),n.op==='+'?1:-1);
+  case'mul':return mulM(E(n.a,env),E(n.b,env));
+  case'div':{const b=E(n.b,env);if(!isS(b))throw 0;return scale(1/b.d[0],E(n.a,env))}
+  case'par':return E(n.a,env);
+  case'post':{const a=E(n.a,env);if(n.v==='T')return tp(a);if(n.v==='inv')return invM(a);if(n.v==='invT')return tp(invM(a));
+    if(!isS(a)&&a.r!==a.c)throw 0;let r=a;for(let i=1;i<n.n;i++)r=mulM(r,a);return r}
+  case'fn':{const a=E(n.a,env);switch(n.f){
+    case'tr':{if(a.r!==a.c)throw 0;let s=0;for(let i=0;i<a.r;i++)s+=a.d[i*a.c+i];return S(s)}
+    case'det':return S(detM(a));
+    case'norm':case'normF':return S(Math.sqrt(a.d.reduce((s,v)=>s+v*v,0)));
+    case'exp':return ew(a,Math.exp);
+    case'log':return ew(a,Math.log);
+    case'sigma':return ew(a,v=>1/(1+Math.exp(-v)));
+    case'inv':return invM(a);
+    case'softmax':{const e=a.d.map(Math.exp),z=e.reduce((s,v)=>s+v,0);return M(a.r,a.c,e.map(v=>v/z))}
+    case'lse':return S(Math.log(a.d.reduce((s,v)=>s+Math.exp(v),0)))}}
+}}
+function same(a,b){if(a.r!==b.r||a.c!==b.c)return false;const sc=1+Math.max(...b.d.map(Math.abs));return a.d.every((v,i)=>Number.isFinite(v)&&Math.abs(v-b.d[i])<=1e-7*sc)}
+
+/* ---------- curated problems ----------
+   L: level 1 linear · 2 quadratic · 3 inverse/det · 4 nonlinear/chain
+   steps: df written as differentials (dX, dx), final form tr(G dX) or gᵀdx
+   pre: optional intermediate form of the gradient before the simplified answer
+   canonical letters: A B C matrices, a b c vectors, X or x the variable */
+const CUR=[
+ // level 1
+ {w:["lin"],L:1,v:'x',f:"a'x",steps:["a'dx"],ans:"a"},
+ {w:["lin", "trT"],L:1,v:'x',f:"x'a",steps:["dx'a","a'dx"],ans:"a"},
+ {w:["lin"],L:1,v:'x',f:"b'Ax",steps:["b'A dx"],pre:"(b'A)'",ans:"A'b"},
+ {w:["lin", "trT"],L:1,v:'x',f:"x'Ab",steps:["dx'Ab","b'A'dx"],ans:"Ab"},
+ {w:["lin", "collect"],L:1,v:'x',f:"a'Bx + c'x",steps:["a'B dx + c'dx","(B'a + c)'dx"],ans:"B'a + c"},
+ {w:["lin"],L:1,v:'x',f:"c'(Ax + b)",steps:["c'A dx"],ans:"A'c"},
+ {w:["lin"],L:1,v:'X',f:"tr(AX)",steps:["tr(A dX)"],ans:"A'"},
+ {w:["lin", "cyc"],L:1,v:'X',f:"tr(XA)",steps:["tr(dX A)","tr(A dX)"],ans:"A'"},
+ {w:["lin", "trT"],L:1,v:'X',f:"tr(X'A)",steps:["tr(dX'A)","tr(A'dX)"],ans:"A"},
+ {w:["lin", "trT", "cyc"],L:1,v:'X',f:"tr(AX')",steps:["tr(A dX')","tr(dX A')","tr(A'dX)"],ans:"A"},
+ {w:["lin", "cyc"],L:1,v:'X',f:"tr(AXB)",steps:["tr(A dX B)","tr(BA dX)"],pre:"(BA)'",ans:"A'B'"},
+ {w:["lin", "trT", "cyc"],L:1,v:'X',f:"tr(AX'B)",steps:["tr(A dX'B)","tr(B'dX A')","tr(A'B'dX)"],pre:"(A'B')'",ans:"BA"},
+ {w:["lin", "sca"],L:1,v:'X',f:"a'Xb",steps:["a'dX b","tr(ba'dX)"],pre:"(ba')'",ans:"ab'"},
+ {w:["lin", "trT", "sca"],L:1,v:'X',f:"a'X'b",steps:["a'dX'b","b'dX a","tr(ab'dX)"],pre:"(ab')'",ans:"ba'"},
+ {w:["lin", "sca"],L:1,v:'X',f:"a'Xa",steps:["a'dX a","tr(aa'dX)"],ans:"aa'"},
+ {w:["lin", "sca"],L:1,v:'X',f:"a'XBb",steps:["a'dX Bb","tr(Bba'dX)"],pre:"(Bba')'",ans:"ab'B'"},
+ {w:["lin", "sca"],L:1,v:'X',f:"a'AXb",steps:["a'A dX b","tr(ba'A dX)"],pre:"(ba'A)'",ans:"A'ab'"},
+ {w:["lin", "eye"],L:1,v:'X',f:"tr(X)",steps:["tr(dX)","tr(I dX)"],ans:"I"},
+ {w:["cyc", "collect"],L:1,v:'X',f:"tr(AXB) + tr(CX)",steps:["tr(BA dX) + tr(C dX)","tr((BA + C)dX)"],pre:"(BA + C)'",ans:"A'B' + C'"},
+ {w:["lin", "trT"],L:1,v:'X',f:"tr(A(X + X'))",steps:["tr(A dX) + tr(A dX')","tr((A + A')dX)"],pre:"(A + A')'",ans:"A + A'"},
+ {w:["lin", "cyc"],L:1,v:'X',f:"tr(XA + BX)",steps:["tr(dX A) + tr(B dX)","tr((A + B)dX)"],pre:"(A + B)'",ans:"A' + B'"},
+ // level 2
+ {w:["prod", "trT"],L:2,v:'x',f:"x'x",pos:1,steps:["dx'x + x'dx","2x'dx"],ans:"2x"},
+ {w:["norm"],L:2,v:'x',f:"norm(x)^2",pos:1,steps:["2x'dx"],ans:"2x"},
+ {w:["prod", "trT"],L:2,v:'x',f:"x'Ax",steps:["dx'Ax + x'A dx","x'(A + A')dx"],ans:"(A + A')x"},
+ {w:["sym"],L:2,v:'x',f:"x'Ax",sym:['A'],cond:"A = A'",steps:["2x'A dx"],ans:"2Ax"},
+ {w:["norm"],L:2,v:'x',f:"norm(x - a)^2",pos:1,steps:["2(x - a)'dx"],ans:"2(x - a)"},
+ {w:["norm"],L:2,v:'x',f:"norm(Ax - b)^2",pos:1,steps:["2(Ax - b)'A dx"],pre:"2((Ax - b)'A)'",ans:"2A'(Ax - b)"},
+ {w:["norm"],L:2,v:'x',f:"norm(Ax)^2",pos:1,steps:["2x'A'A dx"],ans:"2A'Ax"},
+ {w:["sym", "collect"],L:2,v:'x',f:"1/2 x'Ax - b'x",sym:['A'],cond:"A = A'",steps:["x'A dx - b'dx","(Ax - b)'dx"],ans:"Ax - b"},
+ {w:["norm"],L:2,v:'x',f:"norm(Ax - b)^2 + norm(x)^2",pos:1,steps:["2(Ax - b)'A dx + 2x'dx"],ans:"2A'(Ax - b) + 2x"},
+ {w:["chain"],L:2,v:'x',f:"(a'x)^2",steps:["2(a'x)a'dx"],ans:"2(a'x)a"},
+ {w:["prod"],L:2,v:'x',f:"(a'x)(b'x)",steps:["(b'x)a'dx + (a'x)b'dx"],ans:"(b'x)a + (a'x)b"},
+ {w:["prod"],L:2,v:'x',f:"x'Ax + b'x",steps:["x'(A + A')dx + b'dx"],ans:"(A + A')x + b"},
+ {w:["prod"],L:2,v:'x',f:"(x - a)'A(x - a)",steps:["(x - a)'(A + A')dx"],ans:"(A + A')(x - a)"},
+ {w:["sym"],L:2,v:'x',f:"(x - a)'A(x - a)",sym:['A'],cond:"A = A'",steps:["2(x - a)'A dx"],ans:"2A(x - a)"},
+ {w:["prod"],L:2,v:'x',f:"x'A'Bx",steps:["x'(A'B + B'A)dx"],ans:"(A'B + B'A)x"},
+ {w:["prod", "trT"],L:2,v:'X',f:"tr(X'X)",pos:1,steps:["tr(dX'X) + tr(X'dX)","2tr(X'dX)"],ans:"2X"},
+ {w:["norm"],L:2,v:'X',f:"normF(X)^2",pos:1,steps:["2tr(X'dX)"],ans:"2X"},
+ {w:["norm"],L:2,v:'X',f:"normF(X - A)^2",pos:1,steps:["2tr((X - A)'dX)"],ans:"2(X - A)"},
+ {w:["norm"],L:2,v:'X',f:"normF(AX - B)^2",pos:1,steps:["2tr((AX - B)'A dX)"],pre:"2((AX - B)'A)'",ans:"2A'(AX - B)"},
+ {w:["norm", "cyc"],L:2,v:'X',f:"normF(XA - B)^2",pos:1,steps:["2tr((XA - B)'dX A)","2tr(A(XA - B)'dX)"],pre:"2(A(XA - B)')'",ans:"2(XA - B)A'"},
+ {w:["prod", "trT"],L:2,v:'X',f:"tr(X'AX)",steps:["tr(dX'AX) + tr(X'A dX)","tr(X'(A' + A)dX)"],ans:"(A + A')X"},
+ {w:["prod", "trT"],L:2,v:'X',f:"tr(XAX')",steps:["tr(dX AX') + tr(XA dX')","tr((A + A')X'dX)"],ans:"X(A + A')"},
+ {w:["prod", "cyc"],L:2,v:'X',f:"tr(X^2)",steps:["tr(dX X) + tr(X dX)","2tr(X dX)"],ans:"2X'"},
+ {w:["norm", "sca"],L:2,v:'X',f:"norm(Xa)^2",pos:1,steps:["2a'X'dX a","2tr(aa'X'dX)"],ans:"2Xaa'"},
+ {w:["norm", "sca"],L:2,v:'X',f:"norm(Xa - b)^2",pos:1,steps:["2(Xa - b)'dX a","2tr(a(Xa - b)'dX)"],ans:"2(Xa - b)a'"},
+ {w:["prod", "sca"],L:2,v:'X',f:"a'X'Xb",steps:["b'X'dX a + a'X'dX b","tr((ab' + ba')X'dX)"],ans:"X(ba' + ab')"},
+ {w:["prod", "cyc"],L:2,v:'X',f:"tr(AXBX)",steps:["tr(A dX BX) + tr(AXB dX)","tr((BXA + AXB)dX)"],ans:"A'X'B' + B'X'A'"},
+ {w:["prod", "trT"],L:2,v:'X',f:"tr(X'AXB)",steps:["tr(dX'AXB) + tr(X'A dX B)","tr((B'X'A' + BX'A)dX)"],ans:"AXB + A'XB'"},
+ {w:["norm", "collect"],L:2,v:'X',f:"tr(X'X) + tr(AX)",steps:["2tr(X'dX) + tr(A dX)","tr((2X' + A)dX)"],ans:"2X + A'"},
+ {w:["chain", "sca"],L:2,v:'X',f:"(a'Xb)^2",steps:["2(a'Xb)a'dX b","2(a'Xb)tr(ba'dX)"],ans:"2(a'Xb)ab'"},
+ // level 3
+ {w:["logdet"],L:3,v:'X',f:"log(det(X))",cond:"det(X) > 0",steps:["tr(X^-1 dX)"],ans:"X^-T"},
+ {w:["det"],L:3,v:'X',f:"det(X)",steps:["det(X)tr(X^-1 dX)"],ans:"det(X)X^-T"},
+ {w:["chain"],L:3,v:'X',f:"det(X)^2",steps:["2det(X)det(X)tr(X^-1 dX)"],ans:"2det(X)^2 X^-T"},
+ {w:["det", "invp"],L:3,v:'X',f:"det(AX)",steps:["det(AX)tr((AX)^-1 A dX)","det(AX)tr(X^-1 dX)"],ans:"det(AX)X^-T"},
+ {w:["logdet"],L:3,v:'X',f:"log(det(X^-1))",cond:"det(X) > 0",steps:["-tr(X^-1 dX)"],ans:"-X^-T"},
+ {w:["logdet", "cyc", "invp"],L:3,v:'X',f:"log(det(AXB))",cond:"det(AXB) > 0",steps:["tr((AXB)^-1 A dX B)","tr(B(AXB)^-1 A dX)","tr(X^-1 dX)"],ans:"X^-T"},
+ {w:["logdet", "trT", "invp"],L:3,v:'X',f:"log(det(X'X))",steps:["tr((X'X)^-1(dX'X + X'dX))","2tr((X'X)^-1 X'dX)","2tr(X^-1 dX)"],ans:"2X^-T"},
+ {w:["logdet"],L:3,v:'X',f:"log(det(A + X))",cond:"det(A + X) > 0",steps:["tr((A + X)^-1 dX)"],ans:"(A + X)^-T"},
+ {w:["inv", "cyc"],L:3,v:'X',f:"tr(X^-1)",steps:["-tr(X^-1 dX X^-1)","-tr(X^-1 X^-1 dX)"],ans:"-X^-T X^-T"},
+ {w:["inv", "cyc"],L:3,v:'X',f:"tr(X^-1 A)",steps:["-tr(X^-1 dX X^-1 A)","-tr(X^-1 AX^-1 dX)"],pre:"-(X^-1 AX^-1)'",ans:"-X^-T A'X^-T"},
+ {w:["inv", "cyc"],L:3,v:'X',f:"tr(AX^-1)",steps:["-tr(AX^-1 dX X^-1)","-tr(X^-1 AX^-1 dX)"],pre:"-(X^-1 AX^-1)'",ans:"-X^-T A'X^-T"},
+ {w:["inv", "cyc"],L:3,v:'X',f:"tr(AX^-1 B)",steps:["-tr(AX^-1 dX X^-1 B)","-tr(X^-1 BAX^-1 dX)"],pre:"-(X^-1 BAX^-1)'",ans:"-X^-T A'B'X^-T"},
+ {w:["inv", "sca"],L:3,v:'X',f:"a'X^-1 b",steps:["-a'X^-1 dX X^-1 b","-tr(X^-1 ba'X^-1 dX)"],pre:"-(X^-1 ba'X^-1)'",ans:"-X^-T ab'X^-T"},
+ {w:["inv", "sca"],L:3,v:'X',f:"a'X^-1 a",steps:["-a'X^-1 dX X^-1 a","-tr(X^-1 aa'X^-1 dX)"],ans:"-X^-T aa'X^-T"},
+ {w:["inv", "cyc"],L:3,v:'X',f:"tr((A + X)^-1)",steps:["-tr((A + X)^-1 dX (A + X)^-1)","-tr((A + X)^-1 (A + X)^-1 dX)"],ans:"-(A + X)^-T (A + X)^-T"},
+ {w:["det"],L:3,v:'X',f:"det(X^-1)",steps:["-det(X^-1)tr(X^-1 dX)"],ans:"-X^-T / det(X)"},
+ {w:["logdet", "collect"],L:3,v:'X',f:"log(det(X)) - tr(AX)",cond:"det(X) > 0",steps:["tr(X^-1 dX) - tr(A dX)","tr((X^-1 - A)dX)"],ans:"X^-T - A'"},
+ {w:["prod"],L:3,v:'X',f:"det(X)tr(AX)",steps:["tr(AX)det(X)tr(X^-1 dX) + det(X)tr(A dX)"],ans:"det(X)(tr(AX)X^-T + A')"},
+ {w:["prod"],L:3,v:'x',f:"x'A^-1 x",steps:["x'(A^-1 + A^-T)dx"],ans:"(A^-1 + A^-T)x"},
+ {w:["sym"],L:3,v:'x',f:"(x - a)'A^-1(x - a)",sym:['A'],cond:"A = A'",steps:["2(x - a)'A^-1 dx"],ans:"2A^-1(x - a)"},
+ // level 4
+ {w:["exp"],L:4,v:'x',f:"exp(a'x)",steps:["exp(a'x)a'dx"],ans:"exp(a'x)a"},
+ {w:["log"],L:4,v:'x',f:"log(a'x)",cond:"a'x > 0",steps:["a'dx / (a'x)"],ans:"a / (a'x)"},
+ {w:["lse"],L:4,v:'x',f:"lse(x)",steps:["softmax(x)'dx"],ans:"softmax(x)"},
+ {w:["lse"],L:4,v:'x',f:"lse(x) - c'x",steps:["(softmax(x) - c)'dx"],ans:"softmax(x) - c"},
+ {w:["lse"],L:4,v:'x',f:"lse(Ax)",steps:["softmax(Ax)'A dx"],ans:"A'softmax(Ax)"},
+ {w:["sig"],L:4,v:'x',f:"sigma(a'x)",s:"sigma(a'x)",steps:["s(1 - s)a'dx"],ans:"s(1 - s)a"},
+ {w:["softplus"],L:4,v:'x',f:"log(1 + exp(a'x))",s:"sigma(a'x)",steps:["s a'dx"],ans:"sa"},
+ {w:["normr"],L:4,v:'x',f:"norm(x)",steps:["x'dx / norm(x)"],ans:"x / norm(x)"},
+ {w:["normr"],L:4,v:'x',f:"norm(Ax - b)",steps:["(Ax - b)'A dx / norm(Ax - b)"],ans:"A'(Ax - b) / norm(Ax - b)"},
+ {w:["log"],L:4,v:'x',f:"log(1 + norm(x)^2)",steps:["2x'dx / (1 + norm(x)^2)"],ans:"2x / (1 + norm(x)^2)"},
+ {w:["chain", "collect"],L:4,v:'x',f:"(x'x)^2",steps:["2(x'x)2x'dx","4(x'x)x'dx"],ans:"4(x'x)x"},
+ {w:["exp"],L:4,v:'x',f:"exp(x'x)",steps:["exp(x'x)2x'dx"],ans:"2exp(x'x)x"},
+ {w:["quot"],L:4,v:'x',f:"a'x / norm(x)",steps:["a'dx / norm(x) - (a'x)x'dx / norm(x)^3"],ans:"a / norm(x) - (a'x)x / norm(x)^3"},
+ {w:["exp"],L:4,v:'X',f:"exp(tr(AX))",steps:["exp(tr(AX))tr(A dX)"],ans:"exp(tr(AX))A'"},
+ {w:["sig"],L:4,v:'X',f:"sigma(a'Xb)",s:"sigma(a'Xb)",steps:["s(1 - s)tr(ba'dX)"],ans:"s(1 - s)ab'"},
+ {w:["log"],L:4,v:'X',f:"log(a'Xb)",cond:"a'Xb > 0",steps:["tr(ba'dX) / (a'Xb)"],ans:"ab' / (a'Xb)"},
+ {w:["lse", "sca"],L:4,v:'X',f:"lse(Xa)",steps:["softmax(Xa)'dX a","tr(a softmax(Xa)'dX)"],ans:"softmax(Xa)a'"},
+ {w:["prod"],L:4,v:'X',f:"tr(AX)tr(BX)",steps:["tr(BX)tr(A dX) + tr(AX)tr(B dX)"],ans:"tr(BX)A' + tr(AX)B'"},
+ {w:["normr"],L:4,v:'X',f:"normF(X)",steps:["tr(X'dX) / normF(X)"],ans:"X / normF(X)"},
+ {w:["log"],L:4,v:'X',f:"log(normF(X)^2)",steps:["2tr(X'dX) / normF(X)^2"],ans:"2X / normF(X)^2"},
+ {w:["lse", "sca"],L:4,v:'X',f:"lse(Xa) - b'Xa",steps:["(softmax(Xa) - b)'dX a","tr(a(softmax(Xa) - b)'dX)"],ans:"(softmax(Xa) - b)a'"},
+];
+const CURP=CUR.map(c=>({w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
+  f:parse(c.f),ans:parse(c.ans),steps:c.steps.map(parse),pre:c.pre?parse(c.pre):null,cond:c.cond||null,s:c.s?parse(c.s):null}));
+
+/* ---------- generator: chain and product rule over simple bases ---------- */
+const BASES=CURP.filter(p=>p.L<=2&&!p.cond&&!p.s);
+const L1=BASES.filter(p=>p.L===1),L2B=BASES.filter(p=>p.L===2);
+const SWAP={A:'C',B:'D',C:'A',D:'B',a:'c',b:'e',c:'a',e:'b'};
+const lastStep=p=>p.steps[p.steps.length-1];
+const pickVar=(arr,v)=>{const c=arr.filter(p=>p.v===v);return c[Math.floor(Math.random()*c.length)]};
+/* level 1: weighted sums of two linear bases */
+function numMul(k,g){const[c,rest]=splitCoef(g);const coef=(c??1)*k;if(!rest)return A_.num(coef);return coef===1?rest:A_.mul(A_.num(coef),parenAdd(rest))}
+function genLinear(){
+  for(let t=0;t<30;t++){
+    const v=Math.random()<.35?'x':'X';const b=pickVar(L1,v),q=pickVar(L1,v);
+    const u1=b.f,u2=ren(q.f,SWAP);if(R(u1)===R(u2))continue;
+    const d1=lastStep(b),d2=ren(lastStep(q),SWAP),g1=b.ans,g2=ren(q.ans,SWAP);
+    const k=pick([1,1,2,3,-1]);const out={w:['lin'],L:1,v,sym:[],cond:null,s:null,pre:null,gen:true};
+    if(k===-1){out.f=A_.add(u1,parenAdd(u2),'-');out.steps=[A_.add(d1,parenAdd(d2),'-')];out.ans=A_.add(g1,parenAdd(g2),'-')}
+    else if(k===1){out.f=A_.add(u1,u2);out.steps=[A_.add(d1,d2)];out.ans=A_.add(g1,g2)}
+    else{out.f=A_.add(u1,A_.mul(A_.num(k),paren(u2)));out.steps=[A_.add(d1,A_.mul(A_.num(k),parenAdd(d2)))];out.ans=A_.add(g1,numMul(k,g2))}
+    return out}
+}
+/* level 3: substitute X -> X^-1 into a matrix base, or add log det X */
+function subInv(n){
+  if(n.k==='post'&&n.v==='T'&&n.a.k==='var'&&n.a.v==='X')return{k:'post',v:'invT',a:n.a};
+  if(n.k==='var'&&n.v==='X')return{k:'post',v:'inv',a:n};
+  const o={...n};if(n.a)o.a=subInv(n.a);if(n.b)o.b=subInv(n.b);return o}
+function trForm(st){let k=1,n=st;if(n.k==='mul'&&n.a.k==='num'){k=n.a.v;n=n.b}
+  if(n.k==='fn'&&n.f==='tr'&&n.a.k==='mul'&&n.a.b.k==='var'&&n.a.b.v==='dX')return{k,G:n.a.a};return null}
+const INVB=BASES.filter(p=>p.v==='X'&&trForm(lastStep(p)));
+function genInverse(){
+  const Xi={k:'post',v:'inv',a:{k:'var',v:'X'}},XiT={k:'post',v:'invT',a:{k:'var',v:'X'}},dX={k:'var',v:'dX'};
+  if(Math.random()<.45){
+    const b=pickVar(BASES,'X'),ld=parse('log(det(X))'),dl=parse('tr(X^-1 dX)'),k=pick([1,1,2,3,-1]);
+    const o={w:['logdet'],L:3,v:'X',sym:b.sym,cond:'det(X) > 0',s:null,pre:null,gen:true};
+    if(k===-1){o.f=A_.add(ld,parenAdd(b.f),'-');o.steps=[A_.add(dl,parenAdd(lastStep(b)),'-')];o.ans=A_.add(XiT,parenAdd(b.ans),'-')}
+    else if(k===1){o.f=A_.add(ld,b.f);o.steps=[A_.add(dl,lastStep(b))];o.ans=A_.add(XiT,b.ans)}
+    else{o.f=A_.add(ld,A_.mul(A_.num(k),paren(b.f)));o.steps=[A_.add(dl,A_.mul(A_.num(k),parenAdd(lastStep(b))))];o.ans=A_.add(XiT,numMul(k,b.ans))}
+    return o}
+  const b=INVB[Math.floor(Math.random()*INVB.length)];const{k,G}=trForm(lastStep(b));const Gp=parenAdd(subInv(G));
+  const kk=n=>k===1?n:A_.mul(A_.num(k),n);
+  const s1={k:'neg',a:kk(A_.fn('tr',A_.mul(A_.mul(A_.mul(Gp,Xi),dX),Xi)))};
+  const s2={k:'neg',a:kk(A_.fn('tr',A_.mul(A_.mul(A_.mul(Xi,Gp),Xi),dX)))};
+  const[c,rest]=splitCoef(subInv(b.ans));
+  const core=A_.mul(A_.mul(XiT,parenAdd(rest)),XiT);
+  return{w:['inv','cyc'],L:3,v:'X',sym:b.sym,cond:null,s:null,gen:true,f:subInv(b.f),steps:[s1,s2],
+    pre:{k:'neg',a:kk(A_.T(A_.par(A_.mul(A_.mul(Xi,Gp),Xi))))},ans:{k:'neg',a:c&&c!==1?A_.mul(A_.num(c),core):core}}
+}
+function generate(level){
+  if(level===1)return genLinear();
+  if(level===3)return genInverse();
+  const v=Math.random()<.5?'x':'X';
+  const kinds=level===2?['sum']:['square','exp','sigma','log1p','prod','sum'];
+  const kind=kinds[Math.floor(Math.random()*kinds.length)];
+  const b=pickVar(L1,v),u=b.f,du=lastStep(b),g=b.ans;
+  const out={w:[],L:level,v,sym:[],cond:null,s:null,pre:null,gen:true};
+  if(kind==='square'){out.w=['chain'];out.f=A_.pow(paren(u),2);out.steps=[A_.mul(A_.num(2),A_.mul(paren(u),parenAdd(du)))];out.ans=scal(paren(u),g,2)}
+  else if(kind==='exp'){out.w=['exp'];const e=A_.fn('exp',u);out.f=e;out.steps=[A_.mul(e,parenAdd(du))];out.ans=scal(e,g)}
+  else if(kind==='sigma'){out.w=['sig'];const ss=parse('s(1 - s)');out.f=A_.fn('sigma',u);out.s=A_.fn('sigma',u);out.steps=[A_.mul(ss,parenAdd(du))];out.ans=scal(ss,g)}
+  else if(kind==='log1p'){out.w=['log'];const p=pickVar(L2B.filter(q=>q.pos),v);const den=A_.par(A_.add(A_.num(1),p.f));
+    out.f=A_.fn('log',A_.add(A_.num(1),p.f));out.steps=[A_.div(parenAdd(lastStep(p)),den)];out.ans=A_.div(parenAdd(p.ans),den)}
+  else if(kind==='prod'){out.w=['prod'];const q=pickVar(L1,v),u2=ren(q.f,SWAP),d2=ren(lastStep(q),SWAP),g2=ren(q.ans,SWAP);
+    out.f=A_.mul(paren(u),paren(u2));out.steps=[A_.add(A_.mul(paren(u2),parenAdd(du)),A_.mul(paren(u),parenAdd(d2)))];out.ans=A_.add(scal(paren(u2),g),scal(paren(u),g2))}
+  else{out.w=['lin'];const q=pickVar(L2B,v),u2=ren(q.f,SWAP),d2=ren(lastStep(q),SWAP),g2=ren(q.ans,SWAP);
+    out.f=A_.add(u,u2);out.steps=[A_.add(du,d2)];out.ans=A_.add(g,g2);out.sym=(q.sym||[]).map(c=>SWAP[c])}
+  return out;
+}
+
+/* ---------- distractors for choice mode ---------- */
+function nodesOf(n,path=[],acc=[]){acc.push(path);if(n.a)nodesOf(n.a,[...path,'a'],acc);if(n.b)nodesOf(n.b,[...path,'b'],acc);return acc}
+const getAt=(n,p)=>p.reduce((x,k)=>x[k],n);
+function setAt(n,p,val){if(!p.length)return val;const o={...n};o[p[0]]=setAt(n[p[0]],p.slice(1),val);return o}
+function mutate(ans){
+  const paths=nodesOf(ans);
+  for(let t=0;t<20;t++){
+    const p=paths[Math.floor(Math.random()*paths.length)],n=getAt(ans,p);let r=null;
+    if(n.k==='var'&&/[A-Z]/.test(n.v)&&n.v!=='I')r=A_.T(n);
+    else if(n.k==='var'&&/[a-z]/.test(n.v)&&n.v!=='s')r=A_.T(n);
+    else if(n.k==='post'&&n.v==='T')r=n.a;
+    else if(n.k==='post'&&n.v==='inv')r={...n,v:'invT'};
+    else if(n.k==='post'&&n.v==='invT')r=Math.random()<.5?{...n,v:'inv'}:A_.T(n.a);
+    else if(n.k==='num')r=A_.num(n.v===2?1:n.v*2);
+    else if(n.k==='mul')r=A_.mul(n.b,n.a);
+    else if(n.k==='add')r={...n,op:n.op==='+'?'-':'+'};
+    else if(n.k==='neg')r=n.a;
+    else if(n.k==='div')r=A_.mul(n.a,n.b);
+    if(r)return setAt(ans,p,r);
+  }
+  return Math.random()<.5?A_.mul(A_.num(2),ans):A_.T(A_.par(ans));
+}
+
+/* ---------- instantiate a problem with fresh letters and test values ---------- */
+let lastKey='';
+function pickSpec(level){
+  const lv=level==='all'?1+Math.floor(Math.random()*4):+level;
+  const genShare=lv===2?.25:.5;
+  if(Math.random()<genShare)return generate(lv);
+  const pool=CURP.filter(p=>p.L===lv);let s;
+  for(let i=0;i<10;i++){s=pool[Math.floor(Math.random()*pool.length)];if(R(s.f)!==lastKey)break}
+  lastKey=R(s.f);return s;
+}
+function relHTML(c,m){const mm=c.match(/^(.*?)\s*(=|>)\s*(.*)$/);const side=x=>/^\d+$/.test(x.trim())?x.trim():R(ren(parse(x),m),true);return`${side(mm[1])} ${mm[2]} ${side(mm[3])}`}
+function buildRows(fA,stepsA,preA,ansA,w,g){
+  const toks=[RT(fA,true),...stepsA.map(x=>RT(x))];
+  const rows=stepsA.map((x,i)=>({lhs:i?'':'d<i>f</i>',h:hlDiff(toks[i],toks[i+1]),w:w[i]}));
+  if(preA){rows.push({lhs:g,h:R(preA),w:'read',fin:1});rows.push({lhs:'',h:R(ansA),w:'tpp',fin:1})}
+  else rows.push({lhs:g,h:R(ansA),w:'read',fin:1});
+  return rows}
+function makeProblem(level){
+  for(let attempt=0;attempt<20;attempt++){
+    const t=pickSpec(level);
+    const mats=shuffle(['A','B','C','M','P','Q','R','S']),vecs=shuffle(['a','b','c','u','v','y','p','q']);
+    const m={A:mats[0],B:mats[1],C:mats[2],D:mats[3],a:vecs[0],b:vecs[1],c:vecs[2],e:vecs[3],X:pick(['X','W']),x:pick(['x','w','z'])};
+    const r=n=>ren(n,m);
+    const fA=r(t.f),ansA=r(t.ans),stepsA=t.steps.map(r),preA=t.pre?r(t.pre):null,sA=t.s?r(t.s):null;
+    const vs=new Set([...varsOf(fA),...varsOf(ansA),...(sA?varsOf(sA):[])]);
+    ['s','I'].forEach(x=>vs.delete(x));
+    const symSet=new Set(t.sym.map(c=>m[c]));
+    let envs;
+    try{
+      envs=[0,1].map(()=>{const e={I:eye()};vs.forEach(v=>{if(v.length===2)return;e[v]=/[A-Z]/.test(v)?randM(symSet.has(v)):randV()});if(sA)e.s=E(sA,e);return e});
+    }catch(e){continue}
+    let expected;try{expected=envs.map(e=>E(ansA,e))}catch(e){continue}
+    if(!expected.every(x=>x.d.every(Number.isFinite)))continue;
+    const ansH=R(ansA);
+    const opts=[ansH],seen=[expected[0]];
+    for(let k=0;k<60&&opts.length<4;k++){const w=mutate(ansA);let val=null;try{val=E(w,envs[0])}catch(e){}
+      if(val&&seen.some(s=>same(val,s)))continue;const h=R(w);if(opts.includes(h))continue;opts.push(h);if(val)seen.push(val)}
+    if(opts.length<4)continue;
+    const sh=shuffle(opts);
+    const cond=t.s?`<i>s</i> = ${R(sA)}`:t.cond?relHTML(t.cond,m):'';
+    return{L:t.L,f:R(fA,true),vv:`<i>${m[t.v]}</i>`,dv:`d<i>${m[t.v]}</i>`,cond,ansH,envs,expected,opts:sh,ci:sh.indexOf(ansH),
+      rows:buildRows(fA,stepsA,preA,ansA,t.w,`∇<sub><i>${m[t.v]}</i></sub><i>f</i>`)};
+  }
+  throw new Error('no problem');
+}
+function check(p,src){let n;try{n=parse(src)}catch(e){return{ok:false}}
+  try{const got=p.envs.map(e=>E(n,e));return{ok:got.every((g,i)=>same(g,p.expected[i]))}}catch(e){return{ok:false}}}
+
+/* ---------- theme ---------- */
+let theme=store.get('nablamac:theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+const applyTheme=()=>document.documentElement.setAttribute('data-theme',theme);
+applyTheme();
+$('theme').addEventListener('click',()=>{theme=theme==='dark'?'light':'dark';store.set('nablamac:theme',theme);applyTheme()});
+
+/* ---------- live symbol input ---------- */
+const SUBS=[['^-T','⁻ᵀ'],['^-t','⁻ᵀ'],['^-1','⁻¹'],['^T','ᵀ'],['^t','ᵀ'],['^2','²'],['"','⁻ᵀ'],['“','⁻ᵀ'],['”','⁻ᵀ'],['~','⁻¹'],["'",'ᵀ'],['’','ᵀ'],['‘','ᵀ'],['*','·']];
+const sub=s=>{for(const[a,b]of SUBS)s=s.split(a).join(b);return s};
+const KEYS=[['ᵀ',"'",'ᵀ'],['⁻¹','~','⁻¹'],['⁻ᵀ','"','⁻ᵀ'],['²','','²'],['tr','','tr('],['det','','det('],['‖ ‖','','‖‖',1],['I','','I'],['(','','('],[')','',')'],['→','tab','SKIP']];
+
+/* ---------- game ---------- */
+let mode=store.get('nablamac:mode2')||'type',dur=+(store.get('nablamac:dur')||120),level=store.get('nablamac:level')||'all',showSol=store.get('nablamac:sol')==='1';
+if(!['type','mc'].includes(mode))mode='type';
+let st=null;
+const bestKey=()=>`nablamac:best3:${mode}:${level}:${dur}`;
+const getBest=()=>+(store.get(bestKey())||0);
+function syncChips(){
+  if($('mbest'))$('mbest').textContent=`best ${getBest()}`;
+  document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
+  document.querySelectorAll('#durs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.d===dur));
+  document.querySelectorAll('#lvls button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===level));
+  $('lvlhint').innerHTML={'1':`<i>a</i><sup>⊤</sup><i>x</i>, &nbsp;tr(<i>AXB</i>), &nbsp;<i>a</i><sup>⊤</sup><i>Xb</i>`,
+    '2':`<i>x</i><sup>⊤</sup><i>Ax</i>, &nbsp;‖<i>Ax</i> − <i>b</i>‖<sup>2</sup>, &nbsp;tr(<i>X</i><sup>⊤</sup><i>AX</i>)`,
+    '3':`log det <i>X</i>, &nbsp;tr(<i>X</i><sup>−1</sup><i>A</i>), &nbsp;<i>a</i><sup>⊤</sup><i>X</i><sup>−1</sup><i>b</i>`,
+    '4':`σ(<i>a</i><sup>⊤</sup><i>x</i>), &nbsp;log Σ exp(<i>x<sub>i</sub></i>), &nbsp;(<i>a</i><sup>⊤</sup><i>x</i>)<sup>2</sup>`,
+    'all':'a bit of everything'}[level];
+}
+function render(p){
+  const box=$('prob');
+  let h=`<div class="math">${I('f')}(${p.vv}) = ${p.f}</div>`;
+  if(p.cond)h+=`<div class="cond">${p.cond}</div>`;
+  if(mode==='type'){
+    h+=`<div class="eqrow"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} =</span><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Gradient"></div>
+      <div class="keys">${KEYS.map((k,i)=>`<button data-k="${i}" aria-label="${k[0]}">${k[0]}${k[1]?`<small>${k[1]}</small>`:''}</button>`).join('')}</div>`;
+  }else{
+    h+=`<div class="eqrow" style="justify-content:center"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} = ?</span></div><div class="opts">${p.opts.map((o,i)=>`<button class="o" data-i="${i}"><small>${i+1}</small><span>${o}</span></button>`).join('')}</div>`;
+  }
+  box.innerHTML=h;
+  if(mode==='type'){
+    const inp=$('ans');inp.focus();
+    const test=()=>{if(check(p,inp.value).ok)solved()};
+    inp.addEventListener('input',()=>{
+      const c=inp.selectionStart??inp.value.length,pre=sub(inp.value.slice(0,c)),post=sub(inp.value.slice(c));
+      if(pre+post!==inp.value){inp.value=pre+post;inp.setSelectionRange(pre.length,pre.length)}
+      test();
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Tab'){e.preventDefault();skip()}
+      if(e.key==='Enter'){e.preventDefault();if(!check(p,inp.value).ok){inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake')}}
+    });
+    box.querySelectorAll('.keys button').forEach(b=>{
+      b.addEventListener('mousedown',e=>e.preventDefault());
+      b.addEventListener('click',()=>{const k=KEYS[+b.dataset.k];if(k[2]==='SKIP')return skip();
+        const s=inp.selectionStart??inp.value.length,e=inp.selectionEnd??s;
+        inp.value=inp.value.slice(0,s)+k[2]+inp.value.slice(e);const pos=s+k[2].length-(k[3]||0);
+        inp.focus();inp.setSelectionRange(pos,pos);test()});
+    });
+  }else box.querySelectorAll('.o').forEach(b=>b.addEventListener('click',()=>choose(+b.dataset.i)));
+}
+function next(){st.p=makeProblem(level);st.pStart=performance.now();st.missedThis=false;st.tries=0;st.lock=false;render(st.p)}
+function solved(){st.score++;st.times.push(performance.now()-st.pStart);$('score').textContent=st.score;if(st.score>st.best)$('pbest').textContent=st.score;next()}
+function logMiss(){if(st.missedThis)return;st.missedThis=true;st.misses.push(st.p)}
+function skip(){if(!st)return;logMiss();next()}
+function choose(i){
+  if(!st||mode!=='mc'||st.lock)return;
+  const b=$('prob').querySelector(`.o[data-i="${i}"]`);if(!b||b.classList.contains('x'))return;
+  if(i===st.p.ci)return solved();
+  b.classList.add('x','shake');logMiss();st.tries++;
+  if(st.tries>=2){st.lock=true;const c=$('prob').querySelector(`.o[data-i="${st.p.ci}"]`);if(c)c.classList.add('right');
+    const p=st.p;setTimeout(()=>{if(st&&st.p===p)next()},600)}
+}
+function sand(f){if(!$('sandTop'))return;f=Math.max(0,Math.min(1,f));const r=Math.sqrt(f),yt=16-9.5*r,wt=8*(16-yt)/10.5;
+  $('sandTop').setAttribute('points',f>0.002?`13,16 ${(13-wt).toFixed(2)},${yt.toFixed(2)} ${(13+wt).toFixed(2)},${yt.toFixed(2)}`:'');
+  const yb=20+10.5*r,wb=8*(yb-20)/10.5;
+  $('sandBot').setAttribute('points',f<0.998?`5,30.5 21,30.5 ${(13+wb).toFixed(2)},${yb.toFixed(2)} ${(13-wb).toFixed(2)},${yb.toFixed(2)}`:'');
+  $('stream').setAttribute('y2',yb.toFixed(2))}
+function start(){
+  store.set('nablamac:mode2',mode);store.set('nablamac:level',level);store.set('nablamac:dur',dur);
+  st={score:0,times:[],misses:[],end:performance.now()+dur*1000};st.best=getBest();$('pbest').textContent=st.best;
+  $('setup').hidden=true;$('done').hidden=true;$('play').hidden=false;
+  $('score').textContent='0';$('secs').textContent=dur;document.querySelector('header').classList.add('running');next();tick();
+}
+function tick(){if(!st)return;const left=Math.max(0,st.end-performance.now());$('secs').textContent=Math.ceil(left/1000);sand(left/(dur*1000));
+  if(left<=0)return finish(true);st.raf=requestAnimationFrame(tick)}
+function solHTML(m,idx){
+  const g=`∇<sub>${m.vv}</sub><i>f</i>`;
+  const rows=m.rows.map(r=>`<div class="row"><span class="l">${r.lhs}</span><span class="r${r.fin?' fin':''}">= ${r.h}</span><button class="tag" type="button">${RULES[r.w][0]}</button><span class="rule" hidden>${RULES[r.w][1]}</span></div>`).join('');
+  return`<div class="item" data-i="${idx}"><div class="q"><span><i>f</i> = ${m.f}${m.cond?`<span class="c">${m.cond}</span>`:''}</span><span>${g} = ${m.ansH}</span></div>
+    <div class="btns"><button class="solb" type="button">solution</button><button class="stepb" type="button">step ▸</button></div><div class="sol">${rows}</div></div>`}
+let activeItem=null;
+function stepItem(item,dir){const rows=[...item.querySelectorAll('.row')];let n=+(item.dataset.n||rows.length);
+  if(dir>0)n=n>=rows.length?1:n+1;else n=Math.max(1,n-1);
+  item.dataset.n=n;rows.forEach((r,i)=>r.hidden=i>=n);
+  item.querySelector('.stepb').textContent=n>=rows.length?'replay ↺':'next ▸';activeItem=item}
+function syncSol(){$('misses').classList.toggle('show',showSol);$('solbtn').setAttribute('aria-pressed',showSol)}
+function finish(complete){
+  cancelAnimationFrame(st.raf);const s=st;st=null;document.querySelector('header').classList.remove('running');sand(complete?0:1);
+  if(!complete){$('play').hidden=true;$('setup').hidden=false;syncChips();return}
+  const key=bestKey(),prev=s.best;if(s.score>prev)store.set(key,s.score);
+  $('play').hidden=true;$('done').hidden=false;$('final').textContent=s.score;
+  $('stats').textContent=`best ${Math.max(prev,s.score)}`+(s.times.length?` · ${(s.times.reduce((a,b)=>a+b,0)/s.times.length/1000).toFixed(1)} s each`:'');
+  $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;
+  $('again').focus();
+}
+document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;syncChips()}));
+document.querySelectorAll('#durs button').forEach(b=>b.addEventListener('click',()=>{dur=+b.dataset.d;syncChips()}));
+document.querySelectorAll('#lvls button').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.l;syncChips()}));
+$('misses').addEventListener('click',e=>{
+  const t=e.target.closest('.tag');if(t){const r=t.nextElementSibling;r.hidden=!r.hidden;return}
+  const sb=e.target.closest('.solb');if(sb){const it=sb.closest('.item'),was=it.classList.contains('open');
+    $('misses').querySelectorAll('.item.open').forEach(x=>{x.classList.remove('open');x.querySelector('.solb').textContent='solution'});
+    if(!was){it.classList.add('open');sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
+  const b=e.target.closest('.stepb');if(b){const it=b.closest('.item');if(!it.dataset.n)it.dataset.n=it.querySelectorAll('.row').length;stepItem(it,1)}});
+$('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
+$('start').addEventListener('click',start);$('again').addEventListener('click',start);
+$('back').addEventListener('click',()=>{sand(1);$('done').hidden=true;$('setup').hidden=false;syncChips()});
+document.addEventListener('keydown',e=>{
+  if(st){if(e.key==='Escape')return finish(false);if(mode==='mc'&&/^[1-4]$/.test(e.key)){e.preventDefault();choose(+e.key-1)}return}
+  if(activeItem&&!$('done').hidden&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();stepItem(activeItem,e.key==='ArrowRight'?1:-1);return}
+  if(e.key==='Enter'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();start()}
+});
+syncChips();sand(1);
+window.__nm={makeProblem,check,sub};
+})();
+</script>
+</body>
+</html>
