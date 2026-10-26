@@ -30,8 +30,8 @@ html,body{min-height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
 .logo{cursor:pointer}
-.foot{text-align:center;font-size:13px;color:var(--mute);padding:8px 0 28px}.foot a{color:inherit}.foot span{margin:0 6px}
-.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+.foot{margin-top:auto;text-align:center;font-size:13px;color:var(--mute);padding:8px 0 0}.foot a{color:inherit}.foot span{margin:0 6px}
+.wrap{min-height:calc(100vh - 60px);min-height:calc(100dvh - 60px);box-sizing:border-box;max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
 header{display:flex;justify-content:space-between;align-items:center}
 .logo{height:34px;width:auto;display:block;color:var(--fg)}
 #stream{opacity:0}.running #stream{opacity:1;animation:fall .5s linear infinite}
