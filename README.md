@@ -1,4 +1,4 @@
-# goat gradient
+# gradient goat
 
 Zetamac for matrix calculus. You get a scalar function of a vector or matrix, type its gradient, and the next problem appears the instant you're right.
 
