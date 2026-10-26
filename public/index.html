@@ -70,6 +70,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .go{background:var(--fg);color:var(--bg);border-color:var(--fg);padding:10px 28px;font-size:15px;font-weight:600}
 .top{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;color:var(--mute)}
 .top b{color:var(--fg);font-weight:600}
+.frozen .o:not(.right){opacity:.35}
 .math.q{white-space:nowrap;overflow:hidden}
 .math{font-family:var(--f-math);font-size:clamp(24px,5vw,32px);text-align:center;line-height:1.5}
 .math i,.o i,.rv i,.cond i{font-family:var(--f-var);font-style:italic}
@@ -818,17 +819,19 @@ function render(p){
     });
   }else box.querySelectorAll('.o').forEach(b=>b.addEventListener('click',()=>choose(+b.dataset.i)));
 }
-function next(){st.p=makeProblem(level);st.pStart=performance.now();st.missedThis=false;st.tries=0;st.lock=false;render(st.p)}
+function next(){st.p=makeProblem(level);st.pStart=performance.now();st.missedThis=false;st.tries=0;st.lock=false;$('prob').classList.remove('frozen');render(st.p)}
 function solved(){st.score++;st.times.push(performance.now()-st.pStart);$('score').textContent=st.score;if(st.score>st.best)$('pbest').textContent=st.score;next()}
 function logMiss(){if(st.missedThis)return;st.missedThis=true;st.misses.push(st.p)}
-function skip(){if(!st)return;logMiss();next()}
+const FREEZE=2000;
+function penalty(){st.lock=true;const c=$('prob').querySelector(`.o[data-i="${st.p.ci}"]`);if(c)c.classList.add('right');$('prob').classList.add('frozen');
+  const p=st.p;setTimeout(()=>{if(st&&st.p===p){$('prob').classList.remove('frozen');next()}},FREEZE)}
+function skip(){if(!st||st.lock)return;logMiss();if(mode==='mc')penalty();else next()}
 function choose(i){
   if(!st||mode!=='mc'||st.lock)return;
   const b=$('prob').querySelector(`.o[data-i="${i}"]`);if(!b||b.classList.contains('x'))return;
   if(i===st.p.ci)return solved();
   b.classList.add('x','shake');logMiss();st.tries++;
-  if(st.tries>=1){st.lock=true;const c=$('prob').querySelector(`.o[data-i="${st.p.ci}"]`);if(c)c.classList.add('right');
-    const p=st.p;setTimeout(()=>{if(st&&st.p===p)next()},600)}
+  if(st.tries>=1)penalty()
 }
 function sand(f){if(!$('sandTop'))return;f=Math.max(0,Math.min(1,f));const r=Math.sqrt(f),yt=16-9.5*r,wt=8*(16-yt)/10.5;
   $('sandTop').setAttribute('points',f>0.002?`13,16 ${(13-wt).toFixed(2)},${yt.toFixed(2)} ${(13+wt).toFixed(2)},${yt.toFixed(2)}`:'');

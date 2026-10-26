@@ -16,7 +16,7 @@
 const LEVELS = ['1', '2', '3', '4', 'ml', 'nn', 'tf', 'rnn', 'rl', 'all'];
 const DURATIONS = [15, 30, 60, 120, 300];
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,16}$/;
-const MAX_PER_SECOND = 1.2;          // no human answers faster than this, sustained
+const MAX_PER_SECOND = 1.0;          // no human answers faster than this, sustained
 const SUBMIT_WINDOW_MS = 10 * 60e3;  // time allowed after the run ends to submit
 const SESSION_COOKIE = 'gg_session';
 const SESSION_MAX_AGE = 365 * 24 * 3600;
