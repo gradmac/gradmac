@@ -630,7 +630,7 @@ function choose(i){
   const b=$('prob').querySelector(`.o[data-i="${i}"]`);if(!b||b.classList.contains('x'))return;
   if(i===st.p.ci)return solved();
   b.classList.add('x','shake');logMiss();st.tries++;
-  if(st.tries>=2){st.lock=true;const c=$('prob').querySelector(`.o[data-i="${st.p.ci}"]`);if(c)c.classList.add('right');
+  if(st.tries>=1){st.lock=true;const c=$('prob').querySelector(`.o[data-i="${st.p.ci}"]`);if(c)c.classList.add('right');
     const p=st.p;setTimeout(()=>{if(st&&st.p===p)next()},600)}
 }
 function sand(f){if(!$('sandTop'))return;f=Math.max(0,Math.min(1,f));const r=Math.sqrt(f),yt=16-9.5*r,wt=8*(16-yt)/10.5;
