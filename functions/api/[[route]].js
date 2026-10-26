@@ -29,6 +29,48 @@ const json = (data, status = 200, headers = {}) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers },
   });
 
+
+/* ---------- best-score table (one row per player per board) ----------
+   Leaderboard reads touch one row per player instead of every run. The table is created
+   and filled from `scores` the first time the API runs, so no manual migration is needed. */
+let schemaReady = null;
+function ensureSchema(env) {
+  schemaReady ??= (async () => {
+    await env.DB.batch([
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS bests (board TEXT NOT NULL, user_id INTEGER NOT NULL, score INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (board, user_id)) WITHOUT ROWID'),
+      env.DB.prepare('CREATE INDEX IF NOT EXISTS bests_board_score ON bests (board, score DESC, created)'),
+    ]);
+    const done = await env.DB.prepare("SELECT v FROM config WHERE k = 'bests_v1'").first();
+    if (!done) {
+      await env.DB.batch([
+        env.DB.prepare('INSERT OR REPLACE INTO bests (board, user_id, score, created) SELECT board, user_id, MAX(score), MIN(created) FROM scores GROUP BY board, user_id'),
+        env.DB.prepare("INSERT OR IGNORE INTO config (k, v) VALUES ('bests_v1', '1')"),
+      ]);
+    }
+  })().catch(e => { schemaReady = null; throw e; });
+  return schemaReady;
+}
+
+// Public leaderboard reads are shared at the edge for a few seconds, so a burst of
+// players choosing boards costs one database query per board, not one per click.
+const BOARD_TTL = 15;
+async function cached(request, ctx, compute) {
+  const cache = globalThis.caches?.default;
+  if (!cache) return compute();
+  const key = new Request(request.url, { method: 'GET' });
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const res = await compute();
+  if (res.status === 200) {
+    const out = new Response(res.body, res);
+    out.headers.set('cache-control', `public, max-age=${BOARD_TTL}`);
+    const put = cache.put(key, out.clone());
+    ctx?.waitUntil ? ctx.waitUntil(put) : await put;
+    return out;
+  }
+  return res;
+}
+
 function parseBoard(board) {
   if (typeof board !== 'string') return null;
   const [level, d] = board.split(':');
@@ -223,13 +265,19 @@ async function submit(request, env) {
 
   const used = await env.DB.prepare('INSERT OR IGNORE INTO used_tokens (id, created) VALUES (?, ?)').bind(id, Date.now()).run();
   if (!used.meta.changes) return json({ error: 'already submitted' }, 409);
-  await env.DB.prepare('INSERT INTO scores (board, user_id, score, created) VALUES (?, ?, ?, ?)').bind(board, user.id, score, Date.now()).run();
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO scores (board, user_id, score, created) VALUES (?, ?, ?, ?)').bind(board, user.id, score, now),
+    env.DB.prepare(`INSERT INTO bests (board, user_id, score, created) VALUES (?1, ?2, ?3, ?4)
+      ON CONFLICT (board, user_id) DO UPDATE SET
+        created = CASE WHEN excluded.score > bests.score THEN excluded.created ELSE bests.created END,
+        score = MAX(bests.score, excluded.score)`).bind(board, user.id, score, now),
+  ]);
+  if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM used_tokens WHERE created < ?').bind(now - 86400e3).run();
 
-  const mine = await env.DB.prepare('SELECT MAX(score) AS best FROM scores WHERE board = ? AND user_id = ?').bind(board, user.id).first();
-  const best = mine?.best ?? score;
-  const row = await env.DB.prepare(
-    'SELECT COUNT(*) AS n FROM (SELECT user_id, MAX(score) AS s FROM scores WHERE board = ? GROUP BY user_id) WHERE s > ?'
-  ).bind(board, best).first();
+  const mine = await env.DB.prepare('SELECT score FROM bests WHERE board = ? AND user_id = ?').bind(board, user.id).first();
+  const best = mine?.score ?? score;
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM bests WHERE board = ? AND score > ?').bind(board, best).first();
   return json({ ok: true, rank: (row?.n ?? 0) + 1, best });
 }
 
@@ -239,10 +287,10 @@ async function top(url, env) {
   const tag = url.searchParams.get('tag');
   if (tag !== null && (tag.length < 1 || tag.length > 64)) return json({ error: 'bad tag' }, 400);
   const { results } = await env.DB.prepare(
-    `SELECT u.username AS name, CASE WHEN u.show_tag = 1 THEN u.tag END AS tag, MAX(s.score) AS score, MIN(s.created) AS created
-       FROM scores s JOIN users u ON u.id = s.user_id
-      WHERE s.board = ?1 AND (?2 IS NULL OR (u.tag = ?2 AND u.show_tag = 1))
-      GROUP BY s.user_id ORDER BY score DESC, created ASC LIMIT 10`
+    `SELECT u.username AS name, CASE WHEN u.show_tag = 1 THEN u.tag END AS tag, b.score AS score
+       FROM bests b JOIN users u ON u.id = b.user_id
+      WHERE b.board = ?1 AND (?2 IS NULL OR (u.tag = ?2 AND u.show_tag = 1))
+      ORDER BY b.score DESC, b.created ASC LIMIT 10`
   ).bind(board, tag).all();
   return json({ top: results.map(r => ({ name: r.name, tag: r.tag || null, score: r.score })) });
 }
@@ -251,10 +299,9 @@ async function schools(url, env) {
   const board = url.searchParams.get('board');
   if (!parseBoard(board)) return json({ error: 'bad board' }, 400);
   const best = `WITH best AS (
-      SELECT u.tag AS tag, s.user_id AS uid, MAX(s.score) AS b
-        FROM scores s JOIN users u ON u.id = s.user_id
-       WHERE s.board = ?1 AND u.show_tag = 1 AND u.tag IS NOT NULL
-       GROUP BY s.user_id)`;
+      SELECT u.tag AS tag, b.user_id AS uid, b.score AS b
+        FROM bests b JOIN users u ON u.id = b.user_id
+       WHERE b.board = ?1 AND u.show_tag = 1 AND u.tag IS NOT NULL)`;
   const list = await env.DB.prepare(`${best} SELECT tag, COUNT(*) AS players FROM best GROUP BY tag ORDER BY players DESC, tag ASC LIMIT 200`).bind(board).all();
   // school ranking: average of each school's top 5 players, schools with at least 3 players
   const rank = await env.DB.prepare(`${best},
@@ -267,12 +314,14 @@ async function schools(url, env) {
   });
 }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(ctx) {
+  const { request, env } = ctx;
   if (!env.DB) return json({ error: 'leaderboard not configured' }, 503);
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
   const m = request.method;
   try {
+    if (path !== '/api/config') await ensureSchema(env);
     if (path === '/api/config' && m === 'GET') return json({ googleClientId: env.GOOGLE_CLIENT_ID || null });
     if (path === '/api/auth/google' && m === 'POST') return await authGoogle(request, env);
     if (path === '/api/me' && m === 'GET') return json(meOf(await currentUser(request, env)));
@@ -280,8 +329,8 @@ export async function onRequest({ request, env }) {
     if (path === '/api/logout' && m === 'POST') return await logout(request, env);
     if (path === '/api/start' && m === 'POST') return await start(request, env);
     if (path === '/api/scores' && m === 'POST') return await submit(request, env);
-    if (path === '/api/scores' && m === 'GET') return await top(url, env);
-    if (path === '/api/schools' && m === 'GET') return await schools(url, env);
+    if (path === '/api/scores' && m === 'GET') return await cached(request, ctx, () => top(url, env));
+    if (path === '/api/schools' && m === 'GET') return await cached(request, ctx, () => schools(url, env));
     return json({ error: 'not found' }, 404);
   } catch (e) {
     return json({ error: 'server error' }, 500);

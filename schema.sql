@@ -33,3 +33,13 @@ CREATE TABLE IF NOT EXISTS config (
   k TEXT PRIMARY KEY,
   v TEXT NOT NULL
 );
+
+-- One row per player per board (the API also creates and fills this on first run).
+CREATE TABLE IF NOT EXISTS bests (
+  board TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  created INTEGER NOT NULL,
+  PRIMARY KEY (board, user_id)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS bests_board_score ON bests (board, score DESC, created);

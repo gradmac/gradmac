@@ -684,7 +684,8 @@ async function api(path,body){const r=await fetch(API+path,body===undefined?{cac
   const j=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,j}}
 /* board view: 'all' (everyone), 'rank' (school rankings) or 'tag:<school>' */
 const curView=()=>{if(view==='all'||view==='rank'||(view&&view.startsWith('tag:')))return view;return myTag()?'tag:'+myTag():'all'};
-async function loadSchools(b=board()){if(!apiOK)return null;try{const {ok,j}=await api(`/schools?board=${encodeURIComponent(b)}`);if(ok){schoolsCache[b]=j;return j}}catch(e){}return null}
+let bust=0;const bq=()=>bust?`&t=${bust}`:'';
+async function loadSchools(b=board()){if(!apiOK)return null;try{const {ok,j}=await api(`/schools?board=${encodeURIComponent(b)}${bq()}`);if(ok){schoolsCache[b]=j;return j}}catch(e){}return null}
 function renderFilters(){const data=schoolsCache[board()]||{schools:[],ranking:[]},v=curView(),t=myTag();
   const names=data.schools.map(x=>x.tag);if(t&&!names.includes(t))names.unshift(t);if(v.startsWith('tag:')&&!names.includes(v.slice(4)))names.push(v.slice(4));
   const counts=Object.fromEntries(data.schools.map(x=>[x.tag,x.players]));
@@ -711,7 +712,7 @@ async function loadBoard(el,b=board()){
       if(!r.length){const li=document.createElement('li');li.style.display='block';li.style.color='var(--mute)';li.textContent='no school has 3 players on this board yet';el.replaceChildren(li)}
       el.hidden=false;return}
     const tag=v.startsWith('tag:')?v.slice(4):null;
-    const {ok,j}=await api(`/scores?board=${encodeURIComponent(b)}`+(tag?`&tag=${encodeURIComponent(tag)}`:''));if(!ok)throw 0;
+    const {ok,j}=await api(`/scores?board=${encodeURIComponent(b)}`+(tag?`&tag=${encodeURIComponent(tag)}`:'')+bq());if(!ok)throw 0;
     if(b!==board()||curView()!==v)return;
     el.replaceChildren(...j.top.map((t,i)=>row(i,t.name,t.tag&&!tag?[t.tag,'tg']:null,t.score,me.username&&t.name===me.username)));
     if(!j.top.length&&tag){const li=document.createElement('li');li.style.display='block';li.style.color='var(--mute)';li.textContent=`no ${tag} scores on this board yet`;el.replaceChildren(li);el.hidden=false;return}
@@ -888,7 +889,7 @@ async function postScore(){
   if(!me.signedIn||!me.username){pendingPost=true;openPanel();return}
   $('postmsg').textContent='posting…';
   try{const {ok,status,j}=await api('/scores',{token:lastRun.token,score:lastRun.score});
-    if(ok){$('postbtn').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');refreshBoards();return}
+    if(ok){$('postbtn').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');bust=Date.now();refreshBoards();return}
     if(status===401){me={signedIn:false};renderAcct();$('postmsg').textContent='';pendingPost=true;openPanel();return}
     if(j.error==='run not finished'&&lastRun.tries++<2){setTimeout(postScore,2000);return}
     $('postmsg').textContent=j.error||'could not post'}
