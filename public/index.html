@@ -120,8 +120,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .ga{text-align:center;color:var(--mute);line-height:1.2;font-size:13px}
 .grs{margin-top:12px;font:13px var(--f-ui);color:var(--mute)}.grs .gnode{margin-top:6px;font-size:16px;color:var(--fg)}
 .sol .rule{grid-column:2/-1;font-size:14px;color:var(--fg);padding:0 0 6px}
-.stepb{font:12px var(--f-ui);padding:4px 10px;display:none}
-.item.open .stepb{display:inline-block}
 .rv .item.open .sol{display:grid}
 .btns{display:flex;gap:6px}
 .solb{font:12px var(--f-ui);padding:4px 10px}
@@ -252,15 +250,16 @@ function scal(s,g,k=1){const[c,rest]=splitCoef(g);const coef=(c??1)*k;const body
 const lead=n=>(n.k==='mul'||n.k==='div'||n.k==='add'||n.k==='post')?lead(n.a):n;
 const isD=x=>x.k==='var'&&x.v.length===2&&x.v[0]==='d';
 const tk=(k,h)=>({k,h:h??k});
+let DISP={};const disp=v=>DISP[v]||v;const SC=new Set(['k','l']);
 function RT(n,top){switch(n.k){
   case'num':return[tk('n'+n.v,String(n.v))];
-  case'var':return[tk('v'+n.v,isD(n)?`d<i>${n.v[1]}</i>`:`<i>${n.v}</i>`)];
+  case'var':return[tk('v'+n.v,isD(n)?`d<i>${disp(n.v[1])}</i>`:`<i>${disp(n.v)}</i>`)];
   case'neg':return[tk('−'),...RT(n.a)];
   case'add':return[...RT(n.a),tk(n.op,` ${n.op==='+'?'+':'−'} `),...RT(n.b)];
   case'mul':{const l=lead(n.b),tl=x=>x.k==='mul'?tl(x.b):x;
     let sep=l.k==='num'?' · ':(l.k==='fn'&&['tr','det','log','exp','softmax','tanh','diag'].includes(l.f))||isD(l)||isD(tl(n.a))?' ':'';
     return[...RT(n.a),...(sep?[tk('_',sep)]:[]),...RT(n.b)]}
-  case'div':if(n.a.k==='num'&&n.b.k==='num'&&n.a.v===1&&n.b.v===2)return[tk('½')];return[...RT(n.a),tk('/',' / '),...RT(n.b)];
+  case'div':if(n.a.k==='neg'&&n.a.a.k==='num'&&n.a.a.v===1&&n.b.k==='num'&&n.b.v===2)return[tk('−'),tk('½')];if(n.a.k==='num'&&n.b.k==='num'&&n.a.v===1&&n.b.v===2)return[tk('½')];return[...RT(n.a),tk('/',' / '),...RT(n.b)];
   case'par':return[tk('('),...RT(n.a),tk(')')];
   case'post':return[...RT(n.a),tk('^'+n.v+(n.n||''),{T:'<sup>⊤</sup>',inv:'<sup>−1</sup>',invT:'<sup>−⊤</sup>'}[n.v]||`<sup>${n.n}</sup>`)];
   case'fn':{const a=n.a;
@@ -509,18 +508,23 @@ const CUR=[
  {w:["sig","prod","cyc"],L:8,v:'X',f:"sigma(a'X^2 b)",s:"sigma(a'X^2 b)",steps:["s(1 - s)(a'dX Xb + a'X dX b)","s(1 - s)(tr(Xba'dX) + tr(ba'X dX))"],ans:"s(1 - s)(ab'X' + X'ab')"},
  {w:["tanh","prod","cyc"],L:8,v:'X',shared:1,f:"c'tanh(X tanh(Xa))",g:[["Xa","(I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)c"],["tanh(Xa)","X'(I - diag(tanh(X tanh(Xa)))^2)c"],["X tanh(Xa)","(I - diag(tanh(X tanh(Xa)))^2)c"],["tanh(X tanh(Xa))","c"]],steps:["c'(I - diag(tanh(X tanh(Xa)))^2)(dX tanh(Xa) + X(I - diag(tanh(Xa))^2)dX a)","tr(tanh(Xa)c'(I - diag(tanh(X tanh(Xa)))^2)dX) + tr(ac'(I - diag(tanh(X tanh(Xa)))^2)X(I - diag(tanh(Xa))^2)dX)"],ans:"(I - diag(tanh(X tanh(Xa)))^2)c tanh(Xa)' + (I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)ca'"},
  // level 9 · reinforcement learning
- {w:["lse","sca"],L:9,v:'X',f:"c'Xa - lse(Xa)",steps:["c'dX a - softmax(Xa)'dX a","tr(a(c - softmax(Xa))'dX)"],ans:"(c - softmax(Xa))a'"},
- {w:["lse","collect"],L:9,v:'x',f:"c'Ax - lse(Ax)",steps:["c'A dx - softmax(Ax)'A dx","(c - softmax(Ax))'A dx"],pre:"((c - softmax(Ax))'A)'",ans:"A'(c - softmax(Ax))"},
- {w:["smax","sca"],L:9,v:'X',f:"c'softmax(Xa)",steps:["c'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX a","tr(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX)"],pre:"(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)'))'",ans:"(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')ca'"},
- {w:["smax"],L:9,v:'x',f:"c'softmax(x)",steps:["c'(diag(softmax(x)) - softmax(x)softmax(x)')dx"],pre:"(c'(diag(softmax(x)) - softmax(x)softmax(x)'))'",ans:"(diag(softmax(x)) - softmax(x)softmax(x)')c"},
- {w:["norm","sca"],L:9,v:'X',f:"1/2 norm(Xa - b)^2",steps:["(Xa - b)'dX a","tr(a(Xa - b)'dX)"],ans:"(Xa - b)a'"},
- {w:["norm","sca"],L:9,v:'X',f:"norm(Xa - Xc - b)^2",steps:["2(Xa - Xc - b)'dX(a - c)","2tr((a - c)(Xa - Xc - b)'dX)"],ans:"2(Xa - Xc - b)(a - c)'"},
- {w:["norm"],L:9,v:'x',f:"norm(Ax - Bx - b)^2",steps:["2(Ax - Bx - b)'(A - B)dx"],pre:"2((Ax - Bx - b)'(A - B))'",ans:"2(A - B)'(Ax - Bx - b)"},
- {w:["lse","sca"],L:9,v:'X',f:"lse(Xa)",steps:["softmax(Xa)'dX a","tr(a softmax(Xa)'dX)"],ans:"softmax(Xa)a'"},
- {w:["lse","sca","norm"],L:9,v:'X',f:"c'Xa - lse(Xa) - 1/2 normF(X)^2",steps:["c'dX a - softmax(Xa)'dX a - tr(X'dX)","tr(a(c - softmax(Xa))'dX) - tr(X'dX)"],ans:"(c - softmax(Xa))a' - X"},
+ {w:["lse","sca"],L:9,v:'X',f:"c'Xa - lse(Xa)",nm:{X:'Θ',a:'φ',c:'e<sub>a</sub>'},steps:["c'dX a - softmax(Xa)'dX a","tr(a(c - softmax(Xa))'dX)"],ans:"(c - softmax(Xa))a'"},
+ {w:["lse","collect"],L:9,v:'x',f:"c'Ax - lse(Ax)",nm:{x:'θ',A:'Φ',c:'e<sub>a</sub>'},steps:["c'A dx - softmax(Ax)'A dx","(c - softmax(Ax))'A dx"],pre:"((c - softmax(Ax))'A)'",ans:"A'(c - softmax(Ax))"},
+ {w:["smax","sca"],L:9,v:'X',f:"c'softmax(Xa)",nm:{X:'Θ',a:'φ',c:'r'},steps:["c'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX a","tr(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX)"],pre:"(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)'))'",ans:"(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')ca'"},
+ {w:["smax"],L:9,v:'x',f:"c'softmax(x)",nm:{x:'θ',c:'r'},steps:["c'(diag(softmax(x)) - softmax(x)softmax(x)')dx"],pre:"(c'(diag(softmax(x)) - softmax(x)softmax(x)'))'",ans:"(diag(softmax(x)) - softmax(x)softmax(x)')c"},
+ {w:["norm","sca"],L:9,v:'X',f:"1/2 norm(Xa - b)^2",nm:{X:'Θ',a:'φ',b:'y'},steps:["(Xa - b)'dX a","tr(a(Xa - b)'dX)"],ans:"(Xa - b)a'"},
+ {w:["norm","sca"],L:9,v:'X',f:"norm(Xa - Xc - b)^2",nm:{X:'Θ',a:'φ<sub>t</sub>',c:'φ<sub>t+1</sub>',b:'r'},steps:["2(Xa - Xc - b)'dX(a - c)","2tr((a - c)(Xa - Xc - b)'dX)"],ans:"2(Xa - Xc - b)(a - c)'"},
+ {w:["norm"],L:9,v:'x',f:"norm(Ax - Bx - b)^2",nm:{x:'w',A:'Φ<sub>t</sub>',B:'Φ<sub>t+1</sub>',b:'r'},steps:["2(Ax - Bx - b)'(A - B)dx"],pre:"2((Ax - Bx - b)'(A - B))'",ans:"2(A - B)'(Ax - Bx - b)"},
+ {w:["lse","sca"],L:9,v:'X',f:"lse(Xa)",nm:{X:'Θ',a:'φ'},steps:["softmax(Xa)'dX a","tr(a softmax(Xa)'dX)"],ans:"softmax(Xa)a'"},
+ {w:["lse","sca"],L:9,v:'X',f:"k(c'Xa - lse(Xa))",nm:{X:'Θ',a:'φ',c:'e<sub>a</sub>',k:'Â'},steps:["k(c'dX a - softmax(Xa)'dX a)","k tr(a(c - softmax(Xa))'dX)"],ans:"k(c - softmax(Xa))a'"},
+ {w:["exp","sca"],L:9,v:'X',f:"k exp(c'Xa - lse(Xa) - l)",nm:{X:'Θ',a:'φ',c:'e<sub>a</sub>',k:'Â',l:'ℓ<sub>old</sub>'},steps:["k exp(c'Xa - lse(Xa) - l)(c'dX a - softmax(Xa)'dX a)","k exp(c'Xa - lse(Xa) - l)tr(a(c - softmax(Xa))'dX)"],ans:"k exp(c'Xa - lse(Xa) - l)(c - softmax(Xa))a'"},
+ {w:["chain","sca"],L:9,v:'X',f:"1/2 (c'Xa - k)^2",nm:{X:'Θ',a:'φ',c:'e<sub>a</sub>',k:'y'},steps:["(c'Xa - k)c'dX a","(c'Xa - k)tr(ac'dX)"],ans:"(c'Xa - k)ca'"},
+ {w:["chain"],L:9,v:'x',f:"1/2 (a'x - k)^2",nm:{x:'w',a:'φ',k:'y'},steps:["(a'x - k)a'dx"],pre:"((a'x - k)a')'",ans:"(a'x - k)a"},
+ {w:["norm","sca"],L:9,v:'X',f:"-1/2 norm(b - Xa)^2",nm:{X:'Θ',a:'s',b:'u'},steps:["(b - Xa)'dX a","tr(a(b - Xa)'dX)"],ans:"(b - Xa)a'"},
+ {w:["lse","sca","norm"],L:9,v:'X',f:"c'Xa - lse(Xa) - 1/2 normF(X)^2",nm:{X:'Θ',a:'φ',c:'e<sub>a</sub>'},steps:["c'dX a - softmax(Xa)'dX a - tr(X'dX)","tr(a(c - softmax(Xa))'dX) - tr(X'dX)"],ans:"(c - softmax(Xa))a' - X"},
  {w:["lse", "sca"],L:4,v:'X',f:"lse(Xa) - b'Xa",steps:["(softmax(Xa) - b)'dX a","tr(a(softmax(Xa) - b)'dX)"],ans:"(softmax(Xa) - b)a'"},
 ];
-const CURP=CUR.map(c=>({g:(c.g||[]).map(([e,d])=>[parse(e),parse(d)]),shared:!!c.shared,w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
+const CURP=CUR.map(c=>({nm:c.nm||null,g:(c.g||[]).map(([e,d])=>[parse(e),parse(d)]),shared:!!c.shared,w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
   f:parse(c.f),ans:parse(c.ans),steps:c.steps.map(parse),pre:c.pre?parse(c.pre):null,cond:c.cond||null,s:c.s?parse(c.s):null}));
 
 /* ---------- generator: chain and product rule over simple bases ---------- */
@@ -571,7 +575,7 @@ function genInverse(){
 /* topic sections: weighted sums of two curated problems from the same section */
 const plain=n=>R(n).replace(/<[^>]+>/g,'');
 function genSection(L){
-  const pool=CURP.filter(p=>p.L===L&&!p.cond&&!p.s&&!p.sym.length&&plain(p.ans).length<=34);
+  const pool=CURP.filter(p=>p.L===L&&!p.cond&&!p.s&&!p.sym.length&&!(p.f.k==='neg'||(p.f.k==='div'&&p.f.a.k==='neg'))&&plain(p.ans).length<=34);
   for(let t=0;t<40;t++){
     const v=Math.random()<.4?'x':'X',cand=pool.filter(p=>p.v===v);if(cand.length<2)continue;
     const b=cand[Math.floor(Math.random()*cand.length)],q=cand[Math.floor(Math.random()*cand.length)];
@@ -611,7 +615,7 @@ function mutate(ans){
   for(let t=0;t<20;t++){
     const p=paths[Math.floor(Math.random()*paths.length)],n=getAt(ans,p);let r=null;
     if(n.k==='var'&&/[A-Z]/.test(n.v)&&n.v!=='I')r=A_.T(n);
-    else if(n.k==='var'&&/[a-z]/.test(n.v)&&n.v!=='s')r=A_.T(n);
+    else if(n.k==='var'&&/[a-z]/.test(n.v)&&n.v!=='s'&&!SC.has(n.v))r=A_.T(n);
     else if(n.k==='post'&&n.v==='T')r=n.a;
     else if(n.k==='post'&&n.v==='inv')r={...n,v:'invT'};
     else if(n.k==='post'&&n.v==='invT')r=Math.random()<.5?{...n,v:'inv'}:A_.T(n.a);
@@ -644,11 +648,35 @@ function buildRows(fA,stepsA,preA,ansA,w,g){
   if(preA){rows.push({lhs:g,h:R(preA),w:'read',fin:1});rows.push({lhs:'',h:R(ansA),w:'tpp',fin:1})}
   else rows.push({lhs:g,h:R(ansA),w:'read',fin:1});
   return rows}
+/* notation per section: which symbols a problem uses for its weights, data and vectors */
+const SCHEME={
+ 5:{X:['W','Θ'],x:['w','θ','β'],mats:['X','A','B','S'],vecs:['y','a','b','x','c','z']},
+ 6:{X:['W','V'],x:['w','x'],mats:['V','U','A','B','M'],vecs:['x','y','h','z','t','a']},
+ 7:{X:['W','Q','K','V'],x:['q','x','k'],mats:['K','V','Q','W','A','B'],vecs:['x','q','k','v','y','t']},
+ 8:{X:['W','U'],x:['w'],mats:['V','U','A','B'],vecs:['h','x','y','z','t']},
+ 9:{X:['Θ','W'],x:['θ','w'],mats:['Φ','B','Ψ','C'],vecs:['φ','s','r','a','b','y']}};
+const plainT=h=>h.replace(/<[^>]+>/g,'');
+function setNotation(t,m){
+  DISP={};const sc=SCHEME[t.L];SC.forEach((c,i)=>{});
+  DISP.k='α';DISP.l='γ';
+  if(!sc&&!t.nm)return;
+  const roles={};if(t.nm)for(const c in t.nm){const v=t.nm[c];roles[c]=Array.isArray(v)?pick(v):v}
+  const taken=new Set(Object.values(roles).map(plainT));
+  const vname=t.v==='X'?(roles.X||(sc&&pick(sc.X.filter(x=>!taken.has(x))))):(roles.x||(sc&&pick(sc.x.filter(x=>!taken.has(x)))));
+  if(vname){DISP[m[t.v]]=vname;taken.add(plainT(vname))}
+  if(sc){
+    const draw=(pool,extra,keys)=>{const avail=shuffle(pool.filter(x=>!taken.has(x))).concat(extra.filter(x=>!taken.has(x)&&!pool.includes(x)));
+      keys.forEach((c,i)=>{if(roles[c])return;const d=avail[i];if(d){DISP[m[c]]=d;taken.add(d)}})};
+    draw(sc.mats,['M','N','P','R'],['A','B','C','D']);draw(sc.vecs,['p','q','u','v'],['a','b','c','e']);
+  }
+  for(const c in roles){if(c==='k'||c==='l')DISP[c]=roles[c];else if(c!==t.v)DISP[m[c]]=roles[c]}
+}
 function makeProblem(level){
   for(let attempt=0;attempt<20;attempt++){
     const t=pickSpec(level);
     const mats=shuffle(['A','B','C','M','P','Q','R','S']),vecs=shuffle(['a','b','c','u','v','y','p','q']);
     const m={A:mats[0],B:mats[1],C:mats[2],D:mats[3],a:vecs[0],b:vecs[1],c:vecs[2],e:vecs[3],X:pick(['X','W']),x:pick(['x','w','z'])};
+    setNotation(t,m);
     const r=n=>ren(n,m);
     const fA=r(t.f),ansA=r(t.ans),stepsA=t.steps.map(r),preA=t.pre?r(t.pre):null,sA=t.s?r(t.s):null;
     const vs=new Set([...varsOf(fA),...varsOf(ansA),...(sA?varsOf(sA):[])]);
@@ -656,7 +684,7 @@ function makeProblem(level){
     const symSet=new Set(t.sym.map(c=>m[c]));
     let envs;
     try{
-      envs=[0,1].map(()=>{const e={I:eye()};vs.forEach(v=>{if(v.length===2)return;e[v]=/[A-Z]/.test(v)?randM(symSet.has(v)):randV()});if(sA)e.s=E(sA,e);return e});
+      envs=[0,1].map(()=>{const e={I:eye()};vs.forEach(v=>{if(v.length===2)return;e[v]=SC.has(v)?S(rnd()+1.2):/[A-Z]/.test(v)?randM(symSet.has(v)):randV()});if(sA)e.s=E(sA,e);return e});
     }catch(e){continue}
     let expected;try{expected=envs.map(e=>E(ansA,e))}catch(e){continue}
     if(!expected.every(x=>x.d.every(Number.isFinite)))continue;
@@ -667,9 +695,9 @@ function makeProblem(level){
     if(opts.length<4)continue;
     const sh=shuffle(opts);
     const cond=t.s?`<i>s</i> = ${R(sA)}`:t.cond?relHTML(t.cond,m):'';
-    return{L:t.L,f:R(fA,true),vv:`<i>${m[t.v]}</i>`,dv:`d<i>${m[t.v]}</i>`,cond,ansH,envs,expected,opts:sh,ci:sh.indexOf(ansH),
-      rows:buildRows(fA,stepsA,preA,ansA,t.w,`∇<sub><i>${m[t.v]}</i></sub><i>f</i>`),
-      g:(t.g||[]).map(([e,d])=>[R(r(e)),R(r(d))]),gv:`<i>${m[t.v]}</i>`,terms:t.shared?addTerms(ansA).map(x=>R(x)):null};
+    return{L:t.L,f:R(fA,true),vv:`<i>${disp(m[t.v])}</i>`,dv:`d<i>${disp(m[t.v])}</i>`,cond,ansH,envs,expected,opts:sh,ci:sh.indexOf(ansH),
+      rows:buildRows(fA,stepsA,preA,ansA,t.w,`∇<sub><i>${disp(m[t.v])}</i></sub><i>f</i>`),
+      g:(t.g||[]).map(([e,d])=>[R(r(e)),R(r(d))]),gv:`<i>${disp(m[t.v])}</i>`,terms:t.shared?addTerms(ansA).map(x=>R(x)):null};
   }
   throw new Error('no problem');
 }
@@ -872,7 +900,7 @@ function solHTML(m,idx){
   const g=`∇<sub>${m.vv}</sub><i>f</i>`;
   const rows=m.rows.map(r=>`<div class="row"><span class="l">${r.lhs}</span><span class="r${r.fin?' fin':''}">= ${r.h}</span><button class="tag" type="button">${RULES[r.w][0]}</button><span class="rule" hidden>${RULES[r.w][1]}</span></div>`).join('');
   return`<div class="item" data-i="${idx}"><div class="q"><span><i>f</i> = ${m.f}${m.cond?`<span class="c">${m.cond}</span>`:''}</span><span>${g} = ${m.ansH}</span></div>
-    <div class="btns"><button class="solb" type="button">solution</button><button class="stepb" type="button">step ▸</button></div><div class="sol">${rows}${graphHTML(m)}</div></div>`}
+    <div class="btns"><button class="solb" type="button">solution</button></div><div class="sol">${rows}${graphHTML(m)}</div></div>`}
 function graphHTML(m){
   if(!m.g||!m.g.length)return'';
   const nodes=[[m.gv,m.ansH],...m.g,['<i>f</i>','1']];
@@ -889,11 +917,6 @@ function fitItem(item){
 function fitAll(){document.querySelectorAll('#misses .item').forEach(fitItem)}
 addEventListener('resize',()=>{clearTimeout(window.__ft);window.__ft=setTimeout(fitAll,120)});
 function fitGraph(item){item.querySelectorAll('.gr .gnode').forEach(el=>{el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>el.clientWidth+1&&f>10){f-=.5;el.style.fontSize=f+'px'}})}
-let activeItem=null;
-function stepItem(item,dir){const rows=[...item.querySelectorAll('.row')];let n=+(item.dataset.n||rows.length);
-  if(dir>0)n=n>=rows.length?1:n+1;else n=Math.max(1,n-1);
-  item.dataset.n=n;rows.forEach((r,i)=>r.hidden=i>=n);
-  item.querySelector('.stepb').textContent=n>=rows.length?'replay ↺':'next ▸';activeItem=item}
 function syncSol(){$('misses').classList.toggle('show',showSol);$('solbtn').setAttribute('aria-pressed',showSol);if(showSol)requestAnimationFrame(fitAll)}
 function finish(complete){
   cancelAnimationFrame(st.raf);const s=st;st=null;document.querySelector('header').classList.remove('running');sand(complete?0:1);
@@ -901,7 +924,7 @@ function finish(complete){
   const key=bestKey(),prev=s.best;if(s.score>prev)store.set(key,s.score);
   $('play').hidden=true;$('done').hidden=false;$('final').textContent=s.score;
   $('stats').textContent=`best ${Math.max(prev,s.score)}`+(s.times.length?` · ${(s.times.reduce((a,b)=>a+b,0)/s.times.length/1000).toFixed(1)} s each`:'');
-  $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;requestAnimationFrame(fitAll);
+  $('misses').innerHTML=s.misses.map(solHTML).join('');requestAnimationFrame(fitAll);
   lastRun={token:s.token||null,score:s.score,board:board(),tries:0};
   $('postbtn').hidden=!(lastRun.token&&s.score>0);$('postmsg').textContent='';renderPostBtn();
   loadBoard($('lb2'));
@@ -914,8 +937,8 @@ $('misses').addEventListener('click',e=>{
   const t=e.target.closest('.tag');if(t){const r=t.nextElementSibling;r.hidden=!r.hidden;return}
   const sb=e.target.closest('.solb');if(sb){const it=sb.closest('.item'),was=it.classList.contains('open');
     $('misses').querySelectorAll('.item.open').forEach(x=>{x.classList.remove('open');x.querySelector('.solb').textContent='solution'});
-    if(!was){it.classList.add('open');sb.textContent='hide';delete it.dataset.n;it.querySelectorAll('.row').forEach(r=>r.hidden=false);requestAnimationFrame(()=>fitItem(it));it.querySelector('.stepb').textContent='step ▸';activeItem=it}else activeItem=null;return}
-  const b=e.target.closest('.stepb');if(b){const it=b.closest('.item');if(!it.dataset.n)it.dataset.n=it.querySelectorAll('.row').length;stepItem(it,1)}});
+    if(!was){it.classList.add('open');sb.textContent='hide';requestAnimationFrame(()=>fitItem(it))}return}
+});
 $('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
 $('start').addEventListener('click',start);$('again').addEventListener('click',start);
 async function postScore(){
@@ -935,7 +958,6 @@ $('back').addEventListener('click',()=>{sand(1);$('done').hidden=true;$('setup')
 document.addEventListener('keydown',e=>{
   if(!$('panel').hidden){if(e.key==='Escape')closePanel();return}
   if(st){if(e.key==='Escape')return finish(false);if(mode==='mc'&&/^[1-4]$/.test(e.key)){e.preventDefault();choose(+e.key-1)}return}
-  if(activeItem&&!$('done').hidden&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();stepItem(activeItem,e.key==='ArrowRight'?1:-1);return}
   if(e.key==='Enter'&&!(document.activeElement&&['BUTTON','INPUT'].includes(document.activeElement.tagName))){e.preventDefault();start()}
 });
 syncChips();sand(1);loadMe().then(refreshBoards);
