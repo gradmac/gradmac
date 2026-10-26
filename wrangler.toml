@@ -9,5 +9,5 @@ database_name = "gradmac"
 database_id = "08b9afe1-1599-4759-a9c8-f43d2ec15e1c"
 
 [vars]
-# Public OAuth client ID from Google Cloud (not a secret). Empty until Google sign-in is set up.
-GOOGLE_CLIENT_ID = ""
+# Public OAuth client ID from the "gradient goat" Google Cloud project (not a secret).
+GOOGLE_CLIENT_ID = "905189572936-ik846780c6nof9igal5mgarubmabedt9.apps.googleusercontent.com"

@@ -58,6 +58,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .ptitle{font-size:15px;font-weight:600}
 #pbody{display:flex;flex-direction:column;gap:12px;align-items:center;width:100%}
 #pbody p{margin:0;font-size:12.5px;color:var(--mute);line-height:1.5}
+#pbody p a{color:var(--fg)}
 .pmsg{font-size:12.5px;min-height:1em;color:var(--fg)}
 .pclose{position:absolute;top:6px;right:6px;border:0;font-size:20px;width:32px;height:32px;line-height:1}
 .field{font:16px var(--f-num);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:9px 10px;width:100%}
@@ -621,7 +622,7 @@ async function openPanel(){
   $('panel').hidden=false;$('scrim').hidden=false;panelMsg('');const body=$('pbody');
   if(!me.signedIn){
     $('ptitle').textContent=pendingPost?'sign in to post your score':'sign in';
-    body.innerHTML='<div id="gsi"></div><p>Signing in is only needed for the leaderboard. We keep your username and, for school or work Google accounts, the school or company name. Never your email.</p>';
+    body.innerHTML='<div id="gsi"></div><p>Signing in is only needed for the leaderboard. We keep your username and, for school or work Google accounts, the school or company name. Never your email. <a href="/privacy" target="_blank" rel="noopener">Privacy</a></p>';
     try{if(!cfg){const {j}=await api('/config');cfg=j}
       if(!cfg.googleClientId){panelMsg('Sign-in isn’t set up yet.');return}
       await loadGsi();
