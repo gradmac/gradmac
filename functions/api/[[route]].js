@@ -8,6 +8,7 @@
 //   POST /api/start        {board}            -> {token}    signed when a run starts
 //   POST /api/scores       {token, score}     -> {ok, rank, best}   signed-in players only
 //   GET  /api/scores?board=1:60[&tag=Berkeley] -> {top:[{name, tag, score}]}
+//   GET  /api/schools?board=1:60              -> {schools:[{tag, players}], ranking:[{tag, avg, players}]}
 //
 // Bindings: DB (D1). Vars: GOOGLE_CLIENT_ID (public OAuth client ID).
 // Run tokens are signed with a key generated on first use and kept in the database.
@@ -71,22 +72,21 @@ async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
 
-/* ---------- verified tags from Google Workspace domains ---------- */
+/* ---------- verified school tags from Google Workspace domains ---------- */
 const KNOWN = {
   'berkeley.edu': 'Berkeley', 'stanford.edu': 'Stanford', 'mit.edu': 'MIT', 'cmu.edu': 'CMU', 'harvard.edu': 'Harvard',
   'princeton.edu': 'Princeton', 'caltech.edu': 'Caltech', 'uw.edu': 'UW', 'washington.edu': 'UW', 'ucla.edu': 'UCLA',
   'ucsd.edu': 'UCSD', 'utexas.edu': 'UT Austin', 'umich.edu': 'Michigan', 'cornell.edu': 'Cornell', 'columbia.edu': 'Columbia',
   'upenn.edu': 'Penn', 'yale.edu': 'Yale', 'gatech.edu': 'Georgia Tech', 'illinois.edu': 'UIUC', 'nyu.edu': 'NYU',
   'uchicago.edu': 'UChicago', 'usc.edu': 'USC', 'ucdavis.edu': 'UC Davis', 'uci.edu': 'UC Irvine', 'ucsb.edu': 'UCSB',
-  'brown.edu': 'Brown', 'duke.edu': 'Duke', 'jhu.edu': 'Johns Hopkins', 'northwestern.edu': 'Northwestern', 'wisc.edu': 'Wisconsin',
-  'purdue.edu': 'Purdue', 'umd.edu': 'Maryland', 'rice.edu': 'Rice', 'virginia.edu': 'UVA', 'unc.edu': 'UNC',
-  'ox.ac.uk': 'Oxford', 'cam.ac.uk': 'Cambridge', 'imperial.ac.uk': 'Imperial', 'ucl.ac.uk': 'UCL', 'utoronto.ca': 'Toronto',
-  'uwaterloo.ca': 'Waterloo', 'mcgill.ca': 'McGill', 'ethz.ch': 'ETH Zürich', 'epfl.ch': 'EPFL', 'tsinghua.edu.cn': 'Tsinghua',
-  'google.com': 'Google', 'deepmind.com': 'DeepMind', 'openai.com': 'OpenAI', 'anthropic.com': 'Anthropic', 'nvidia.com': 'NVIDIA',
-  'janestreet.com': 'Jane Street', 'citadel.com': 'Citadel', 'twosigma.com': 'Two Sigma', 'hudsonrivertrading.com': 'HRT',
-  'jumptrading.com': 'Jump', 'databricks.com': 'Databricks', 'scale.com': 'Scale AI', 'huggingface.co': 'Hugging Face',
-  'stripe.com': 'Stripe', 'airbnb.com': 'Airbnb', 'uber.com': 'Uber', 'tesla.com': 'Tesla', 'x.ai': 'xAI', 'mistral.ai': 'Mistral',
+  'ucsc.edu': 'UC Santa Cruz', 'brown.edu': 'Brown', 'duke.edu': 'Duke', 'jhu.edu': 'Johns Hopkins', 'northwestern.edu': 'Northwestern',
+  'wisc.edu': 'Wisconsin', 'purdue.edu': 'Purdue', 'umd.edu': 'Maryland', 'rice.edu': 'Rice', 'virginia.edu': 'UVA',
+  'unc.edu': 'UNC', 'dartmouth.edu': 'Dartmouth', 'vanderbilt.edu': 'Vanderbilt', 'utoronto.ca': 'Toronto', 'uwaterloo.ca': 'Waterloo',
+  'mcgill.ca': 'McGill', 'ubc.ca': 'UBC', 'ox.ac.uk': 'Oxford', 'cam.ac.uk': 'Cambridge', 'imperial.ac.uk': 'Imperial',
+  'ucl.ac.uk': 'UCL', 'ethz.ch': 'ETH Zürich', 'epfl.ch': 'EPFL', 'tsinghua.edu.cn': 'Tsinghua', 'nus.edu.sg': 'NUS',
 };
+// academic domains: .edu, .edu.xx, .ac.xx, plus the listed schools outside those suffixes
+const isSchool = d => /\.edu$/.test(d) || /\.(edu|ac)\.[a-z]{2}$/.test(d) || d in KNOWN;
 const TWO_LEVEL = /\.(ac|co|edu|gov|org|com)\.[a-z]{2}$/;
 function orgDomain(d) {
   const labels = d.toLowerCase().split('.');
@@ -98,6 +98,7 @@ function tagFor(claims) {
   const email = String(claims.email || '').toLowerCase();
   if (!email.endsWith('@' + claims.hd.toLowerCase()) && !email.endsWith('.' + claims.hd.toLowerCase())) return { domain: null, tag: null };
   const d = orgDomain(claims.hd);
+  if (!isSchool(d)) return { domain: null, tag: null }; // work accounts sign in fine but get no tag
   return { domain: d, tag: KNOWN[d] || d };
 }
 
@@ -246,6 +247,26 @@ async function top(url, env) {
   return json({ top: results.map(r => ({ name: r.name, tag: r.tag || null, score: r.score })) });
 }
 
+async function schools(url, env) {
+  const board = url.searchParams.get('board');
+  if (!parseBoard(board)) return json({ error: 'bad board' }, 400);
+  const best = `WITH best AS (
+      SELECT u.tag AS tag, s.user_id AS uid, MAX(s.score) AS b
+        FROM scores s JOIN users u ON u.id = s.user_id
+       WHERE s.board = ?1 AND u.show_tag = 1 AND u.tag IS NOT NULL
+       GROUP BY s.user_id)`;
+  const list = await env.DB.prepare(`${best} SELECT tag, COUNT(*) AS players FROM best GROUP BY tag ORDER BY players DESC, tag ASC LIMIT 200`).bind(board).all();
+  // school ranking: average of each school's top 5 players, schools with at least 3 players
+  const rank = await env.DB.prepare(`${best},
+      ranked AS (SELECT tag, b, ROW_NUMBER() OVER (PARTITION BY tag ORDER BY b DESC) AS rn, COUNT(*) OVER (PARTITION BY tag) AS n FROM best)
+      SELECT tag, AVG(b) AS avg, MAX(n) AS players FROM ranked WHERE rn <= 5 GROUP BY tag HAVING MAX(n) >= 3
+      ORDER BY avg DESC, players DESC LIMIT 20`).bind(board).all();
+  return json({
+    schools: list.results.map(r => ({ tag: r.tag, players: r.players })),
+    ranking: rank.results.map(r => ({ tag: r.tag, avg: Math.round(r.avg * 10) / 10, players: r.players })),
+  });
+}
+
 export async function onRequest({ request, env }) {
   if (!env.DB) return json({ error: 'leaderboard not configured' }, 503);
   const url = new URL(request.url);
@@ -260,6 +281,7 @@ export async function onRequest({ request, env }) {
     if (path === '/api/start' && m === 'POST') return await start(request, env);
     if (path === '/api/scores' && m === 'POST') return await submit(request, env);
     if (path === '/api/scores' && m === 'GET') return await top(url, env);
+    if (path === '/api/schools' && m === 'GET') return await schools(url, env);
     return json({ error: 'not found' }, 404);
   } catch (e) {
     return json({ error: 'server error' }, 500);

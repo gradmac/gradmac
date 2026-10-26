@@ -51,7 +51,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .lb li span:first-child{color:var(--mute)}.lb li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb li.me{font-weight:600}
 .lb li .tg{color:var(--mute);font-weight:400;font-size:12px;margin-left:8px}
-.filt button{padding:4px 10px;font-size:12px}
+.bview{display:flex;justify-content:center;width:100%;max-width:320px}
+.bsel{font:13px var(--f-num);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;max-width:320px}
+.lb li .np{color:var(--mute);font-size:12px;font-weight:400;margin-left:8px}
 .acct{border:0;font-size:13px;padding:0 8px;height:34px;color:var(--fg)}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
 .panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:21;width:min(360px,calc(100vw - 32px));background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:24px 20px 20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
@@ -140,7 +142,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
     <button class="go" id="start">start</button>
     <div class="sub" id="mbest"></div>
-    <div class="seg filt" id="filt" hidden></div>
+    <div class="bview" id="filt" hidden></div>
     <ol class="lb" id="lb" hidden></ol>
   </section>
 
@@ -155,7 +157,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <button class="go" id="postbtn" type="button" hidden>post score</button>
     <div class="sub" id="postmsg"></div>
     <div class="seg"><button class="go" id="again">again</button><button id="back" style="padding:10px 18px">menu</button></div>
-    <div class="seg filt" id="filt2" hidden></div>
+    <div class="bview" id="filt2" hidden></div>
     <ol class="lb" id="lb2" hidden></ol>
     <button id="solbtn" hidden></button>
     <div class="rv" id="misses"></div>
@@ -593,23 +595,43 @@ const getBest=()=>+(store.get(bestKey())||0);
 /* ---------- accounts and leaderboard (served by the site's /api; hidden anywhere it isn't) ---------- */
 const API='/api',apiOK=/^https?:$/.test(location.protocol);
 const board=()=>`${level}:${dur}`;
-let me={signedIn:false},cfg=null,pendingPost=false,filt=store.get('gg:filt')==='tag'?'tag':'all';
+let me={signedIn:false},cfg=null,pendingPost=false,view=store.get('gg:view'),schoolsCache={};
 const myTag=()=>me.signedIn&&me.tag&&me.showTag?me.tag:null;
 async function api(path,body){const r=await fetch(API+path,body===undefined?{cache:'no-cache'}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,j}}
-function renderFilters(){const t=myTag();if(!t&&filt==='tag')filt='all';
-  for(const id of ['filt','filt2']){const el=$(id);if(!el)continue;el.hidden=!t;if(!t)continue;
-    el.replaceChildren(...[['all','everyone'],['tag',t]].map(([v,l])=>{const b=document.createElement('button');b.type='button';b.textContent=l;b.setAttribute('aria-pressed',filt===v);
-      b.addEventListener('click',()=>{filt=v;store.set('gg:filt',v);renderFilters();loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'))});return b}))}}
+/* board view: 'all' (everyone), 'rank' (school rankings) or 'tag:<school>' */
+const curView=()=>{if(view==='all'||view==='rank'||(view&&view.startsWith('tag:')))return view;return myTag()?'tag:'+myTag():'all'};
+async function loadSchools(b=board()){if(!apiOK)return null;try{const {ok,j}=await api(`/schools?board=${encodeURIComponent(b)}`);if(ok){schoolsCache[b]=j;return j}}catch(e){}return null}
+function renderFilters(){const data=schoolsCache[board()]||{schools:[],ranking:[]},v=curView(),t=myTag();
+  const names=data.schools.map(x=>x.tag);if(t&&!names.includes(t))names.unshift(t);if(v.startsWith('tag:')&&!names.includes(v.slice(4)))names.push(v.slice(4));
+  const counts=Object.fromEntries(data.schools.map(x=>[x.tag,x.players]));
+  for(const id of ['filt','filt2']){const el=$(id);if(!el)continue;el.hidden=!apiOK||(!names.length&&v==='all');if(el.hidden)continue;
+    const sel=document.createElement('select');sel.className='bsel';sel.setAttribute('aria-label','Which leaderboard');
+    const opt=(val,label)=>{const o=document.createElement('option');o.value=val;o.textContent=label;return o};
+    sel.append(opt('all','everyone'),opt('rank','school rankings'));
+    if(names.length){const g=document.createElement('optgroup');g.label='schools';
+      names.forEach(n=>g.append(opt('tag:'+n,(n===t?'★ ':'')+n+(counts[n]?` (${counts[n]})`:''))));sel.append(g)}
+    sel.value=v;sel.addEventListener('change',()=>{view=sel.value;store.set('gg:view',view);renderFilters();loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'))});
+    el.replaceChildren(sel)}}
+async function refreshBoards(){await loadSchools();renderFilters();loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'))}
 async function loadBoard(el,b=board()){
   if(!apiOK){el.hidden=true;return}
-  const tag=filt==='tag'?myTag():null;
-  try{const {ok,j}=await api(`/scores?board=${encodeURIComponent(b)}`+(tag?`&tag=${encodeURIComponent(tag)}`:''));if(!ok)throw 0;
-    if(b!==board())return;
-    el.replaceChildren(...j.top.map((t,i)=>{const li=document.createElement('li');
-      const a=document.createElement('span');a.textContent=i+1;const n=document.createElement('span');n.textContent=t.name;
-      if(t.tag){const g=document.createElement('span');g.className='tg';g.textContent=t.tag;n.append(g)}
-      const sc=document.createElement('b');sc.textContent=t.score;li.append(a,n,sc);if(me.username&&t.name===me.username)li.className='me';return li}));
+  const v=curView();
+  const row=(i,name,sub,val,me_)=>{const li=document.createElement('li');const a=document.createElement('span');a.textContent=i+1;
+    const n=document.createElement('span');n.textContent=name;if(sub){const g=document.createElement('span');g.className=sub[1];g.textContent=sub[0];n.append(g)}
+    const sc=document.createElement('b');sc.textContent=val;li.append(a,n,sc);if(me_)li.className='me';return li};
+  try{
+    if(v==='rank'){const data=schoolsCache[b]||await loadSchools(b);if(b!==board()||curView()!=='rank')return;
+      const r=(data&&data.ranking)||[];
+      el.replaceChildren(...r.map((x,i)=>row(i,x.tag,[`${x.players} players`,'np'],x.avg,x.tag===myTag())));
+      {const note=document.createElement('li');note.style.display='block';note.style.color='var(--mute)';note.style.fontSize='12px';note.textContent='average of each school’s top 5 · schools need 3+ players';el.append(note)}
+      if(!r.length){const li=document.createElement('li');li.style.display='block';li.style.color='var(--mute)';li.textContent='no school has 3 players on this board yet';el.replaceChildren(li)}
+      el.hidden=false;return}
+    const tag=v.startsWith('tag:')?v.slice(4):null;
+    const {ok,j}=await api(`/scores?board=${encodeURIComponent(b)}`+(tag?`&tag=${encodeURIComponent(tag)}`:''));if(!ok)throw 0;
+    if(b!==board()||curView()!==v)return;
+    el.replaceChildren(...j.top.map((t,i)=>row(i,t.name,t.tag&&!tag?[t.tag,'tg']:null,t.score,me.username&&t.name===me.username)));
+    if(!j.top.length&&tag){const li=document.createElement('li');li.style.display='block';li.style.color='var(--mute)';li.textContent=`no ${tag} scores on this board yet`;el.replaceChildren(li);el.hidden=false;return}
     el.hidden=!j.top.length}catch(e){el.hidden=true}}
 function renderAcct(){const b=$('acct');b.hidden=!apiOK;b.textContent=me.signedIn&&me.username?'@'+me.username:'sign in';renderFilters();renderPostBtn()}
 async function loadMe(){if(!apiOK)return;try{const {ok,j}=await api('/me');if(ok)me=j}catch(e){}renderAcct()}
@@ -622,7 +644,7 @@ async function openPanel(){
   $('panel').hidden=false;$('scrim').hidden=false;panelMsg('');const body=$('pbody');
   if(!me.signedIn){
     $('ptitle').textContent=pendingPost?'sign in to post your score':'sign in';
-    body.innerHTML='<div id="gsi"></div><p>Signing in is only needed for the leaderboard. We keep your username and, for school or work Google accounts, the school or company name. Never your email. <a href="/privacy" target="_blank" rel="noopener">Privacy</a></p>';
+    body.innerHTML='<div id="gsi"></div><p>Signing in is only needed for the leaderboard. We keep your username and, for school Google accounts, your school&rsquo;s name. Never your email. <a href="/privacy" target="_blank" rel="noopener">Privacy</a></p>';
     try{if(!cfg){const {j}=await api('/config');cfg=j}
       if(!cfg.googleClientId){panelMsg('Sign-in isn’t set up yet.');return}
       await loadGsi();
@@ -645,7 +667,7 @@ async function openPanel(){
       me=j;renderAcct();finishSignIn()});
     setTimeout(()=>$('uname').focus(),0);return}
   $('ptitle').textContent='@'+me.username;
-  body.innerHTML=(me.tag?`<label class="check"><input type="checkbox" id="showtag2"${me.showTag?' checked':''}> show my <b></b> tag</label>`:'<p>No school or company tag. Tags come from school or work Google accounts.</p>')
+  body.innerHTML=(me.tag?`<label class="check"><input type="checkbox" id="showtag2"${me.showTag?' checked':''}> show my <b></b> tag</label>`:'<p>No school tag. Tags come from school Google accounts (like @berkeley.edu).</p>')
     +'<button class="linkbtn" id="signout" type="button">sign out</button>';
   if(me.tag){body.querySelector('.check b').textContent=me.tag;
     $('showtag2').addEventListener('change',async e=>{const {ok,j}=await api('/me',{showTag:e.target.checked});if(ok){me=j;renderAcct();loadBoard($('lb'))}})}
@@ -658,13 +680,13 @@ async function onCredential(resp){
   me=j;renderAcct();
   if(!me.username){openPanel();return}
   finishSignIn()}
-function finishSignIn(){const post=pendingPost;$('panel').hidden=true;$('scrim').hidden=true;pendingPost=false;loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'));if(post)postScore()}
+function finishSignIn(){const post=pendingPost;$('panel').hidden=true;$('scrim').hidden=true;pendingPost=false;refreshBoards();if(post)postScore()}
 $('acct').addEventListener('click',()=>{pendingPost=false;openPanel()});
 $('pclose').addEventListener('click',closePanel);$('scrim').addEventListener('click',closePanel);
 function renderPostBtn(){const b=$('postbtn');if(!b)return;b.textContent=me.signedIn&&me.username?'post score':'sign in to post'}
 let lbTimer=0,lastRun=null;
 function syncChips(){
-  clearTimeout(lbTimer);lbTimer=setTimeout(()=>loadBoard($('lb')),150);
+  clearTimeout(lbTimer);lbTimer=setTimeout(refreshBoards,150);
   if($('mbest'))$('mbest').textContent=`best ${getBest()}`;
   document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
   document.querySelectorAll('#durs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.d===dur));
@@ -774,7 +796,7 @@ async function postScore(){
   if(!me.signedIn||!me.username){pendingPost=true;openPanel();return}
   $('postmsg').textContent='posting…';
   try{const {ok,status,j}=await api('/scores',{token:lastRun.token,score:lastRun.score});
-    if(ok){$('postbtn').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');loadBoard($('lb2'),lastRun.board);return}
+    if(ok){$('postbtn').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');refreshBoards();return}
     if(status===401){me={signedIn:false};renderAcct();$('postmsg').textContent='';pendingPost=true;openPanel();return}
     if(j.error==='run not finished'&&lastRun.tries++<2){setTimeout(postScore,2000);return}
     $('postmsg').textContent=j.error||'could not post'}
@@ -787,7 +809,7 @@ document.addEventListener('keydown',e=>{
   if(activeItem&&!$('done').hidden&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();stepItem(activeItem,e.key==='ArrowRight'?1:-1);return}
   if(e.key==='Enter'&&!(document.activeElement&&['BUTTON','INPUT'].includes(document.activeElement.tagName))){e.preventDefault();start()}
 });
-syncChips();sand(1);loadMe().then(()=>loadBoard($('lb')));
+syncChips();sand(1);loadMe().then(refreshBoards);
 window.__nm={makeProblem,check,sub};
 })();
 </script>

@@ -51,8 +51,8 @@ Every push to `main` deploys automatically.
 
 - **Sign-in.** Players sign in with Google to post scores; playing needs no account. Sessions last a year, so returning players post with one tap.
 - **Usernames.** Each Google account picks a username once, on first sign-in, and keeps it.
-- **Tags.** Tags come only from Google Workspace accounts (school or work email, e.g. `@berkeley.edu` becomes **Berkeley**). Personal Gmail gets no tag. Showing the tag is the player's choice. Stored per user: Google's account ID, username, and the school or company domain. Never the email address.
-- **Boards.** One board per level and duration, top 10 by each player's best, filterable to the player's own school or company.
+- **School tags.** Tags come only from school Google Workspace accounts (`.edu`, `.ac.uk`, `.edu.au` and similar, plus a few listed schools such as ETH Zürich). `@berkeley.edu` becomes **Berkeley**; unlisted schools show their domain. Work and personal accounts sign in normally but get no tag. Showing the tag is the player's choice. Stored per user: Google's account ID, username and school domain. Never the email address.
+- **Boards.** One board per level and duration, top 10 by each player's best. A picker switches between everyone, any school's board, and **school rankings**: schools ranked by the average of their top 5 players, counting only schools with at least 3 players.
 - **Run checks.** A run gets a signed token when it starts. A score is accepted once per token, only after the full duration, and at most 1.2 points per second.
 
 Google sign-in needs a Google Cloud OAuth client ID (a public value), set as `GOOGLE_CLIENT_ID` in `wrangler.toml`. Its authorized JavaScript origins must include every domain the site is served from.
