@@ -4,7 +4,7 @@ Zetamac for matrix calculus. You get a scalar function of a vector or matrix, ty
 
 ## Play
 
-Open `index.html` in a browser. There is no build step and no server code.
+Open `public/index.html` in a browser to play offline. The leaderboard only appears when the site is served with its backend (see below).
 
 ## How it works
 
@@ -30,10 +30,49 @@ Letters written next to each other multiply. Tab skips a problem, and Esc quits 
 
 ∇ₓf has the same shape as X, with entry (i, j) equal to ∂f/∂Xᵢⱼ. Gradients with respect to vectors are column vectors.
 
-## Deploying
+## Project layout
 
-The site is static. On Cloudflare Pages, connect this repo with no build command and set the output directory to `/`. The `_headers` file adds a strict content security policy and other security headers.
+```
+public/            the static site (index.html, fonts, _headers)
+functions/api/     leaderboard API, run as a Cloudflare Pages Function
+schema.sql         D1 database tables
+wrangler.toml      Cloudflare config (D1 binding)
+```
+
+## Deploying on Cloudflare Pages
+
+1. **Create the database.** In the Cloudflare dashboard, open **Storage & Databases → D1 → Create**, name it `gradmac`, then paste the contents of `schema.sql` into its **Console** and run it. Copy the database ID into `wrangler.toml`.
+2. **Create the Pages project.** Go to **Workers & Pages → Create → Pages → Connect to Git** and pick this repo. Leave the build command empty and set the output directory to `public`.
+3. **Add the signing secret.** In the project's **Settings → Variables and Secrets**, add a secret named `SECRET` with a long random value (for example the output of `openssl rand -hex 32`). Redeploy once afterward.
+4. **Add the domain.** Under **Custom domains**, add `gradmac.com`.
+
+Every push to `main` deploys automatically.
+
+## Leaderboard
+
+There is one board per level and duration. It shows the top 10, with each name's best score.
+
+- When a run starts, the server signs a token recording the board and the start time.
+- A score is accepted only after that run's full duration has passed, within 10 minutes of the end, once per token, and at most 1.2 points per second.
+- Names are 1–16 letters, digits, spaces, `.`, `_` or `-`.
+
+These checks stop casual tampering, such as posting a made-up score with curl. They can't stop someone who scripts the game itself, so treat the board as a friendly one.
+
+To remove an entry, run this in the D1 console:
+
+```sql
+DELETE FROM scores WHERE name = 'someone';
+```
+
+## Running locally
+
+```
+npm install -g wrangler
+echo 'SECRET="dev"' > .dev.vars
+wrangler d1 execute gradmac --local --file schema.sql
+wrangler pages dev
+```
 
 ## Credits
 
-Source Code Pro by Adobe, under the SIL Open Font License (`fonts/OFL.txt`).
+Source Code Pro by Adobe, under the SIL Open Font License (`public/fonts/OFL.txt`).

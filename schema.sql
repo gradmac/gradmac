@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS scores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  board TEXT NOT NULL,
+  name TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  created INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS scores_board_score ON scores (board, score DESC);
+
+CREATE TABLE IF NOT EXISTS used_tokens (
+  id TEXT PRIMARY KEY,
+  created INTEGER NOT NULL
+);

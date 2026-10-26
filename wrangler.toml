@@ -1,0 +1,9 @@
+name = "gradmac"
+pages_build_output_dir = "public"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gradmac"
+# Replace with the ID Cloudflare shows after you create the D1 database.
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

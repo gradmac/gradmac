@@ -46,6 +46,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .lvlhint{font-family:var(--f-math);font-size:16px;color:var(--mute);min-height:24px;text-align:center;margin-top:-8px}
 .lvlhint i{font-family:var(--f-var);font-style:italic}.lvlhint sup,.lvlhint sub{font-size:.62em;line-height:0}
+.lb{list-style:none;margin:4px 0 0;padding:0;width:100%;max-width:320px;font-family:var(--f-num);font-size:14px;font-variant-numeric:tabular-nums}
+.lb li{display:grid;grid-template-columns:3ch minmax(0,1fr) auto;gap:10px;padding:5px 0;border-top:1px solid var(--line)}
+.lb li span:first-child{color:var(--mute)}.lb li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb li.me{font-weight:600}
+.post{display:flex;gap:6px;justify-content:center}
+#pname{font:15px var(--f-num);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:12em;min-width:0}
 .go{background:var(--fg);color:var(--bg);border-color:var(--fg);padding:10px 28px;font-size:15px;font-weight:600}
 .top{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;color:var(--mute)}
 .top b{color:var(--fg);font-weight:600}
@@ -111,6 +117,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
     <button class="go" id="start">start</button>
     <div class="sub" id="mbest"></div>
+    <ol class="lb" id="lb" hidden></ol>
   </section>
 
   <section id="play" hidden>
@@ -121,7 +128,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
   <section id="done" class="col" hidden>
     <div class="big" id="final">0</div>
     <div class="sub" id="stats"></div>
+    <form class="post" id="post" hidden><input id="pname" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="your name" aria-label="Name for the leaderboard"><button class="go" type="submit">post</button></form>
+    <div class="sub" id="postmsg"></div>
     <div class="seg"><button class="go" id="again">again</button><button id="back" style="padding:10px 18px">menu</button></div>
+    <ol class="lb" id="lb2" hidden></ol>
     <button id="solbtn" hidden></button>
     <div class="rv" id="misses"></div>
   </section>
@@ -555,7 +565,20 @@ let mode='mc',dur=+(store.get('nablamac:dur')||120),level=store.get('nablamac:le
 let st=null;
 const bestKey=()=>`nablamac:best3:${mode}:${level}:${dur}`;
 const getBest=()=>+(store.get(bestKey())||0);
+/* ---------- leaderboard (served by the site's /api; hidden anywhere it isn't) ---------- */
+const API='/api',apiOK=/^https?:$/.test(location.protocol);
+const board=()=>`${level}:${dur}`;
+async function loadBoard(el,b=board(),hi){
+  if(!apiOK){el.hidden=true;return}
+  try{const r=await fetch(`${API}/scores?board=${encodeURIComponent(b)}`,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();
+    if(b!==board())return;
+    el.replaceChildren(...j.top.map((t,i)=>{const li=document.createElement('li');
+      const a=document.createElement('span');a.textContent=i+1;const n=document.createElement('span');n.textContent=t.name;
+      const sc=document.createElement('b');sc.textContent=t.score;li.append(a,n,sc);if(hi&&t.name===hi)li.className='me';return li}));
+    el.hidden=!j.top.length}catch(e){el.hidden=true}}
+let lbTimer=0,lastRun=null;
 function syncChips(){
+  clearTimeout(lbTimer);lbTimer=setTimeout(()=>loadBoard($('lb')),150);
   if($('mbest'))$('mbest').textContent=`best ${getBest()}`;
   document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
   document.querySelectorAll('#durs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.d===dur));
@@ -616,8 +639,11 @@ function sand(f){if(!$('sandTop'))return;f=Math.max(0,Math.min(1,f));const r=Mat
   $('sandBot').setAttribute('points',f<0.998?`5,30.5 21,30.5 ${(13+wb).toFixed(2)},${yb.toFixed(2)} ${(13-wb).toFixed(2)},${yb.toFixed(2)}`:'');
   $('stream').setAttribute('y2',yb.toFixed(2))}
 function start(){
+  const runBoard=board();
   store.set('nablamac:mode2',mode);store.set('nablamac:level',level);store.set('nablamac:dur',dur);
   st={score:0,times:[],misses:[],end:performance.now()+dur*1000};st.best=getBest();$('pbest').textContent=st.best;
+  {const run=st;if(apiOK)fetch(`${API}/start`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({board:runBoard})})
+    .then(r=>r.ok?r.json():null).then(j=>{if(j&&j.token)run.token=j.token}).catch(()=>{});}
   $('setup').hidden=true;$('done').hidden=true;$('play').hidden=false;
   $('score').textContent='0';$('secs').textContent=dur;document.querySelector('header').classList.add('running');next();tick();
 }
@@ -641,6 +667,9 @@ function finish(complete){
   $('play').hidden=true;$('done').hidden=false;$('final').textContent=s.score;
   $('stats').textContent=`best ${Math.max(prev,s.score)}`+(s.times.length?` · ${(s.times.reduce((a,b)=>a+b,0)/s.times.length/1000).toFixed(1)} s each`:'');
   $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;
+  lastRun={token:s.token||null,score:s.score,board:board(),tries:0};
+  $('post').hidden=!(lastRun.token&&s.score>0);$('postmsg').textContent='';$('pname').value=store.get('gradmac:name')||'';
+  loadBoard($('lb2'));
   $('again').focus();
 }
 document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;syncChips()}));
@@ -654,11 +683,22 @@ $('misses').addEventListener('click',e=>{
   const b=e.target.closest('.stepb');if(b){const it=b.closest('.item');if(!it.dataset.n)it.dataset.n=it.querySelectorAll('.row').length;stepItem(it,1)}});
 $('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
 $('start').addEventListener('click',start);$('again').addEventListener('click',start);
+async function postScore(){
+  const name=$('pname').value.trim();if(!lastRun||!lastRun.token)return;
+  if(!/^[A-Za-z0-9_.\- ]{1,16}$/.test(name)){$('postmsg').textContent='name: 1–16 letters, digits, spaces, . _ -';return}
+  $('postmsg').textContent='posting…';
+  try{const r=await fetch(`${API}/scores`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:lastRun.token,name,score:lastRun.score})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){store.set('gradmac:name',name);$('post').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');loadBoard($('lb2'),lastRun.board,name);return}
+    if(j.error==='run not finished'&&lastRun.tries++<2){setTimeout(postScore,2000);return}
+    $('postmsg').textContent=j.error||'could not post'}
+  catch(e){$('postmsg').textContent='could not reach the leaderboard'}}
+$('post').addEventListener('submit',e=>{e.preventDefault();postScore()});
 $('back').addEventListener('click',()=>{sand(1);$('done').hidden=true;$('setup').hidden=false;syncChips()});
 document.addEventListener('keydown',e=>{
   if(st){if(e.key==='Escape')return finish(false);if(mode==='mc'&&/^[1-4]$/.test(e.key)){e.preventDefault();choose(+e.key-1)}return}
   if(activeItem&&!$('done').hidden&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();stepItem(activeItem,e.key==='ArrowRight'?1:-1);return}
-  if(e.key==='Enter'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();start()}
+  if(e.key==='Enter'&&!(document.activeElement&&['BUTTON','INPUT'].includes(document.activeElement.tagName))){e.preventDefault();start()}
 });
 syncChips();sand(1);
 window.__nm={makeProblem,check,sub};
