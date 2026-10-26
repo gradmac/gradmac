@@ -86,7 +86,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:520px}
 .o{display:flex;gap:10px;align-items:center;padding:12px;text-align:left;min-width:0}
 .o small{font:11px var(--f-num);color:var(--mute)}
-.o span{font-family:var(--f-math);font-size:20px;overflow-wrap:anywhere;min-width:0}
+.o span{font-family:var(--f-math);font-size:20px;white-space:nowrap;min-width:0}
+.opts.wide{grid-template-columns:1fr;max-width:720px}
 .o.x{opacity:.3;cursor:default}
 .o.right{border-color:var(--fg);border-width:2px}
 .big{font-family:var(--f-num);font-size:72px;font-weight:600;line-height:1}
@@ -791,9 +792,10 @@ function render(p){
     h+=`<div class="eqrow"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} =</span><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Gradient"></div>
       <div class="keys">${KEYS.map((k,i)=>`<button data-k="${i}" aria-label="${k[0]}">${k[0]}${k[1]?`<small>${k[1]}</small>`:''}</button>`).join('')}</div>`;
   }else{
-    h+=`<div class="eqrow" style="justify-content:center"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} = ?</span></div><div class="opts">${p.opts.map((o,i)=>`<button class="o" data-i="${i}"><small>${i+1}</small><span>${o}</span></button>`).join('')}</div>`;
+    h+=`<div class="eqrow" style="justify-content:center"><span class="math lhs">∇<sub>${p.vv}</sub>${I('f')} = ?</span></div><div class="opts${p.opts.some(o=>o.replace(/<[^>]+>/g,'').length>20)?' wide':''}">${p.opts.map((o,i)=>`<button class="o" data-i="${i}"><small>${i+1}</small><span>${o}</span></button>`).join('')}</div>`;
   }
   box.innerHTML=h;
+  box.querySelectorAll('.o span').forEach(sp=>{let f=20;while(sp.scrollWidth>sp.clientWidth+1&&f>10){f--;sp.style.fontSize=f+'px'}});
   if(mode==='type'){
     const inp=$('ans');inp.focus();
     const test=()=>{if(check(p,inp.value).ok)solved()};
