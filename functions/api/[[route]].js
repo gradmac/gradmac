@@ -13,7 +13,7 @@
 // Bindings: DB (D1). Vars: GOOGLE_CLIENT_ID (public OAuth client ID).
 // Run tokens are signed with a key generated on first use and kept in the database.
 
-const LEVELS = ['1', '2', '3', '4', 'all'];
+const LEVELS = ['1', '2', '3', '4', 'ml', 'nn', 'tf', 'rnn', 'rl', 'all'];
 const DURATIONS = [15, 30, 60, 120, 300];
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,16}$/;
 const MAX_PER_SECOND = 1.2;          // no human answers faster than this, sustained

@@ -138,6 +138,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 
   <section id="setup" class="col">
     <div class="seg" id="lvls"><button data-l="1" id="l-1">linear</button><button data-l="2" id="l-2">quadratic</button><button data-l="3" id="l-3">inverse</button><button data-l="4" id="l-4">chain</button><button data-l="all" id="l-all">mixed</button></div>
+    <div class="seg" id="topics"><button data-l="ml" id="l-ml">classic ml</button><button data-l="nn" id="l-nn">neural nets</button><button data-l="tf" id="l-tf">attention</button><button data-l="rnn" id="l-rnn">rnn</button><button data-l="rl" id="l-rl">rl</button></div>
     <div class="lvlhint" id="lvlhint"></div>
     <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
     <button class="go" id="start">start</button>
@@ -172,7 +173,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const I=s=>`<i>${s}</i>`;
 /* ---------- tokenizer + parser ---------- */
-const FUNCS=['softmax','normF','sigma','norm','det','exp','log','lse','inv','tr'];
+const FUNCS=['softmax','normF','sigma','norm','diag','tanh','det','exp','log','lse','inv','tr'];
 function tokenize(s){
   s=s.replace(/[−–]/g,'-').replace(/⁻ᵀ/g,'^-T').replace(/⁻¹/g,'^-1').replace(/²/g,'^2').replace(/³/g,'^3').replace(/[ᵀ⊤]/g,'^T')
      .replace(/[‖|]([^‖|]*)[‖|]/g,'norm($1)').replace(/σ/g,'sigma').replace(/[·×]/g,'*').replace(/½/g,'(1/2)');
@@ -242,7 +243,7 @@ function RT(n,top){switch(n.k){
   case'neg':return[tk('−'),...RT(n.a)];
   case'add':return[...RT(n.a),tk(n.op,` ${n.op==='+'?'+':'−'} `),...RT(n.b)];
   case'mul':{const l=lead(n.b),tl=x=>x.k==='mul'?tl(x.b):x;
-    let sep=l.k==='num'?' · ':(l.k==='fn'&&['tr','det','log','exp','softmax'].includes(l.f))||isD(l)||isD(tl(n.a))?' ':'';
+    let sep=l.k==='num'?' · ':(l.k==='fn'&&['tr','det','log','exp','softmax','tanh','diag'].includes(l.f))||isD(l)||isD(tl(n.a))?' ':'';
     return[...RT(n.a),...(sep?[tk('_',sep)]:[]),...RT(n.b)]}
   case'div':if(n.a.k==='num'&&n.b.k==='num'&&n.a.v===1&&n.b.v===2)return[tk('½')];return[...RT(n.a),tk('/',' / '),...RT(n.b)];
   case'par':return[tk('('),...RT(n.a),tk(')')];
@@ -282,6 +283,9 @@ const RULES={
  exp:['exp','d exp(<i>u</i>) = exp(<i>u</i>) d<i>u</i>'],
  log:['log','d log <i>u</i> = d<i>u</i> / <i>u</i>'],
  lse:['log-sum-exp','d lse(<i>v</i>) = softmax(<i>v</i>)<sup>⊤</sup>d<i>v</i>'],
+ tanh:['tanh layer','d tanh(<i>u</i>) = (<i>I</i> − diag(tanh <i>u</i>)<sup>2</sup>) d<i>u</i>'],
+ sigv:['sigmoid layer','dσ(<i>u</i>) = diag(σ)(<i>I</i> − diag(σ)) d<i>u</i>'],
+ smax:['softmax jacobian','d softmax(<i>v</i>) = (diag(<i>p</i>) − <i>pp</i><sup>⊤</sup>) d<i>v</i>, &nbsp;<i>p</i> = softmax(<i>v</i>)'],
  sig:['sigmoid','dσ(<i>u</i>) = σ(1 − σ) d<i>u</i>'],
  softplus:['softplus','d log(1 + e<sup><i>u</i></sup>) = σ(<i>u</i>) d<i>u</i>'],
  quot:['quotient','d(<i>u</i>/<i>v</i>) = d<i>u</i>/<i>v</i> − <i>u</i> d<i>v</i>/<i>v</i><sup>2</sup>'],
@@ -324,6 +328,8 @@ function E(n,env){switch(n.k){
     case'tr':{if(a.r!==a.c)throw 0;let s=0;for(let i=0;i<a.r;i++)s+=a.d[i*a.c+i];return S(s)}
     case'det':return S(detM(a));
     case'norm':case'normF':return S(Math.sqrt(a.d.reduce((s,v)=>s+v*v,0)));
+    case'diag':{const n=a.d.length,d=new Array(n*n).fill(0);for(let i=0;i<n;i++)d[i*n+i]=a.d[i];return M(n,n,d)}
+    case'tanh':return ew(a,Math.tanh);
     case'exp':return ew(a,Math.exp);
     case'log':return ew(a,Math.log);
     case'sigma':return ew(a,v=>1/(1+Math.exp(-v)));
@@ -434,6 +440,66 @@ const CUR=[
  {w:["prod"],L:4,v:'X',f:"tr(AX)tr(BX)",steps:["tr(BX)tr(A dX) + tr(AX)tr(B dX)"],ans:"tr(BX)A' + tr(AX)B'"},
  {w:["normr"],L:4,v:'X',f:"normF(X)",steps:["tr(X'dX) / normF(X)"],ans:"X / normF(X)"},
  {w:["log"],L:4,v:'X',f:"log(normF(X)^2)",steps:["2tr(X'dX) / normF(X)^2"],ans:"2X / normF(X)^2"},
+ // level 5 · classic ml
+ {w:["norm"],L:5,v:'x',f:"1/2 norm(Ax - b)^2",steps:["(Ax - b)'A dx"],pre:"((Ax - b)'A)'",ans:"A'(Ax - b)"},
+ {w:["norm"],L:5,v:'x',f:"1/2 norm(Ax - b)^2 + 1/2 norm(x)^2",steps:["(Ax - b)'A dx + x'dx"],ans:"A'(Ax - b) + x"},
+ {w:["norm"],L:5,v:'X',f:"normF(AX - B)^2 + normF(X)^2",steps:["2tr((AX - B)'A dX) + 2tr(X'dX)"],ans:"2A'(AX - B) + 2X"},
+ {w:["normr","norm"],L:5,v:'x',f:"norm(Ax - b)^2 + norm(x)",steps:["2(Ax - b)'A dx + x'dx / norm(x)"],ans:"2A'(Ax - b) + x / norm(x)"},
+ {w:["softplus"],L:5,v:'x',f:"log(1 + exp(-a'x))",s:"sigma(-a'x)",steps:["-s a'dx"],ans:"-sa"},
+ {w:["softplus"],L:5,v:'X',f:"log(1 + exp(a'Xb))",s:"sigma(a'Xb)",steps:["s tr(ba'dX)"],ans:"sab'"},
+ {w:["lse"],L:5,v:'x',f:"lse(Ax) - c'Ax",steps:["(softmax(Ax) - c)'A dx"],pre:"((softmax(Ax) - c)'A)'",ans:"A'(softmax(Ax) - c)"},
+ {w:["lse","sca"],L:5,v:'X',f:"lse(Xa) - b'Xa",steps:["(softmax(Xa) - b)'dX a","tr(a(softmax(Xa) - b)'dX)"],ans:"(softmax(Xa) - b)a'"},
+ {w:["lse","sca","norm"],L:5,v:'X',f:"lse(Xa) - b'Xa + 1/2 normF(X)^2",steps:["(softmax(Xa) - b)'dX a + tr(X'dX)","tr(a(softmax(Xa) - b)'dX) + tr(X'dX)"],ans:"(softmax(Xa) - b)a' + X"},
+ {w:["logdet","collect"],L:5,v:'X',f:"log(det(X)) - tr(AX)",cond:"det(X) > 0",steps:["tr(X^-1 dX) - tr(A dX)","tr((X^-1 - A)dX)"],ans:"X^-T - A'"},
+ {w:["sym"],L:5,v:'X',f:"tr(X'AX)",sym:['A'],cond:"A = A'",steps:["2tr(X'A dX)"],ans:"2AX"},
+ {w:["quot","sym"],L:5,v:'x',f:"x'Ax / (x'x)",sym:['A'],cond:"A = A'",steps:["2x'A dx / (x'x) - (x'Ax)2x'dx / (x'x)^2"],ans:"2Ax / (x'x) - 2(x'Ax)x / (x'x)^2"},
+ {w:["norm","sca"],L:5,v:'X',f:"norm(X(a - b))^2",steps:["2(X(a - b))'dX(a - b)","2tr((a - b)(X(a - b))'dX)"],ans:"2X(a - b)(a - b)'"},
+ {w:["inv","sca"],L:5,v:'X',f:"a'(A + X)^-1 a",steps:["-a'(A + X)^-1 dX(A + X)^-1 a","-tr((A + X)^-1 aa'(A + X)^-1 dX)"],ans:"-(A + X)^-T aa'(A + X)^-T"},
+ {w:["prod","sym"],L:5,v:'x',f:"1/2 x'Ax - b'x + 1/2 norm(x)^2",sym:['A'],cond:"A = A'",steps:["x'A dx - b'dx + x'dx"],ans:"Ax - b + x"},
+ // level 6 · neural nets
+ {w:["norm","sca"],L:6,v:'X',f:"norm(AXb - c)^2",steps:["2(AXb - c)'A dX b","2tr(b(AXb - c)'A dX)"],pre:"2(b(AXb - c)'A)'",ans:"2A'(AXb - c)b'"},
+ {w:["norm","sca"],L:6,v:'X',f:"norm(XAb - c)^2",steps:["2(XAb - c)'dX Ab","2tr(Ab(XAb - c)'dX)"],ans:"2(XAb - c)b'A'"},
+ {w:["norm","cyc"],L:6,v:'X',f:"normF(AXB - C)^2",steps:["2tr((AXB - C)'A dX B)","2tr(B(AXB - C)'A dX)"],pre:"2(B(AXB - C)'A)'",ans:"2A'(AXB - C)B'"},
+ {w:["norm"],L:6,v:'x',f:"norm(ABx - c)^2",steps:["2(ABx - c)'AB dx"],pre:"2((ABx - c)'AB)'",ans:"2B'A'(ABx - c)"},
+ {w:["norm","sca"],L:6,v:'X',f:"norm(AXb - c)^2 + normF(X)^2",steps:["2(AXb - c)'A dX b + 2tr(X'dX)","2tr(b(AXb - c)'A dX) + 2tr(X'dX)"],ans:"2A'(AXb - c)b' + 2X"},
+ {w:["lse","sca"],L:6,v:'X',f:"lse(AXb) - c'AXb",steps:["(softmax(AXb) - c)'A dX b","tr(b(softmax(AXb) - c)'A dX)"],pre:"(b(softmax(AXb) - c)'A)'",ans:"A'(softmax(AXb) - c)b'"},
+ {w:["softplus","sca"],L:6,v:'X',f:"log(1 + exp(-a'Xb))",s:"sigma(-a'Xb)",steps:["-s tr(ba'dX)"],ans:"-sab'"},
+ {w:["tanh"],L:6,v:'x',f:"c'tanh(Ax)",steps:["c'(I - diag(tanh(Ax))^2)A dx"],pre:"(c'(I - diag(tanh(Ax))^2)A)'",ans:"A'(I - diag(tanh(Ax))^2)c"},
+ {w:["tanh","sca"],L:6,v:'X',f:"c'tanh(Xa)",steps:["c'(I - diag(tanh(Xa))^2)dX a","tr(ac'(I - diag(tanh(Xa))^2)dX)"],pre:"(ac'(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)ca'"},
+ {w:["norm","tanh","sca"],L:6,v:'X',f:"norm(tanh(Xa) - b)^2",steps:["2(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX a","2tr(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2)dX)"],pre:"2(a(tanh(Xa) - b)'(I - diag(tanh(Xa))^2))'",ans:"2(I - diag(tanh(Xa))^2)(tanh(Xa) - b)a'"},
+ {w:["sigv","sca"],L:6,v:'X',f:"c'sigma(Xa)",steps:["c'diag(sigma(Xa))(I - diag(sigma(Xa)))dX a","tr(ac'diag(sigma(Xa))(I - diag(sigma(Xa)))dX)"],pre:"(ac'diag(sigma(Xa))(I - diag(sigma(Xa))))'",ans:"diag(sigma(Xa))(I - diag(sigma(Xa)))ca'"},
+ {w:["lse","tanh","sca"],L:6,v:'X',f:"lse(A tanh(Xa)) - e'A tanh(Xa)",steps:["(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX a","tr(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2)dX)"],pre:"(a(softmax(A tanh(Xa)) - e)'A(I - diag(tanh(Xa))^2))'",ans:"(I - diag(tanh(Xa))^2)A'(softmax(A tanh(Xa)) - e)a'"},
+ {w:["prod","trT","sca"],L:6,v:'X',f:"norm(X'Xa - a)^2",steps:["2(X'Xa - a)'(dX'Xa + X'dX a)","2a'X'dX(X'Xa - a) + 2(X'Xa - a)'X'dX a","2tr((X'Xa - a)a'X'dX) + 2tr(a(X'Xa - a)'X'dX)"],ans:"2X(a(X'Xa - a)' + (X'Xa - a)a')"},
+ // level 7 · attention
+ {w:["lin","trT","sca"],L:7,v:'X',f:"a'X'Ab",steps:["a'dX'Ab","b'A'dX a","tr(ab'A'dX)"],ans:"Aba'"},
+ {w:["prod","trT"],L:7,v:'x',f:"(Ax)'(Bx)",steps:["dx'A'Bx + x'A'B dx","x'(B'A + A'B)dx"],ans:"(B'A + A'B)x"},
+ {w:["prod","sca"],L:7,v:'X',f:"a'X'Xb",steps:["b'X'dX a + a'X'dX b","tr((ab' + ba')X'dX)"],ans:"X(ba' + ab')"},
+ {w:["lse","sca"],L:7,v:'X',f:"lse(A'Xb) - c'A'Xb",steps:["(softmax(A'Xb) - c)'A'dX b","tr(b(softmax(A'Xb) - c)'A'dX)"],pre:"(b(softmax(A'Xb) - c)'A')'",ans:"A(softmax(A'Xb) - c)b'"},
+ {w:["lse"],L:7,v:'x',f:"lse(A'Bx) - c'A'Bx",steps:["(softmax(A'Bx) - c)'A'B dx"],pre:"((softmax(A'Bx) - c)'A'B)'",ans:"B'A(softmax(A'Bx) - c)"},
+ {w:["lse","trT","sca"],L:7,v:'X',f:"lse(X'Ba) - c'X'Ba",steps:["(softmax(X'Ba) - c)'dX'Ba","a'B'dX(softmax(X'Ba) - c)","tr((softmax(X'Ba) - c)a'B'dX)"],pre:"((softmax(X'Ba) - c)a'B')'",ans:"Ba(softmax(X'Ba) - c)'"},
+ {w:["norm","sca"],L:7,v:'X',f:"norm(X softmax(A'b) - c)^2",steps:["2(X softmax(A'b) - c)'dX softmax(A'b)","2tr(softmax(A'b)(X softmax(A'b) - c)'dX)"],ans:"2(X softmax(A'b) - c)softmax(A'b)'"},
+ {w:["lse","eye"],L:7,v:'x',f:"lse(A(I + B)x)",steps:["softmax(A(I + B)x)'A(I + B)dx"],pre:"(softmax(A(I + B)x)'A(I + B))'",ans:"(I + B)'A'softmax(A(I + B)x)"},
+ {w:["smax"],L:7,v:'x',f:"c'A softmax(Bx)",steps:["c'A(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')B dx"],pre:"(c'A(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')B)'",ans:"B'(diag(softmax(Bx)) - softmax(Bx)softmax(Bx)')A'c"},
+ {w:["smax","sca"],L:7,v:'X',f:"c'softmax(Xa)",steps:["c'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX a","tr(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX)"],pre:"(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)'))'",ans:"(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')ca'"},
+ // level 8 · rnn
+ {w:["prod","cyc","sca"],L:8,v:'X',f:"a'XXb",steps:["a'dX Xb + a'X dX b","tr(Xba'dX) + tr(ba'X dX)"],ans:"ab'X' + X'ab'"},
+ {w:["prod","cyc"],L:8,v:'X',f:"tr(X^3)",steps:["3tr(X^2 dX)"],ans:"3X'X'"},
+ {w:["prod","cyc","sca"],L:8,v:'X',f:"a'X^3 b",steps:["a'dX X^2 b + a'X dX X b + a'X^2 dX b","tr(X^2 ba'dX) + tr(Xba'X dX) + tr(ba'X^2 dX)"],ans:"ab'X'X' + X'ab'X' + X'X'ab'"},
+ {w:["norm","prod","cyc"],L:8,v:'X',f:"norm(X^2 b - c)^2",steps:["2(X^2 b - c)'(dX Xb + X dX b)","2tr(Xb(X^2 b - c)'dX) + 2tr(b(X^2 b - c)'X dX)"],ans:"2(X^2 b - c)b'X' + 2X'(X^2 b - c)b'"},
+ {w:["norm","prod","cyc"],L:8,v:'X',f:"norm(X(Xa + b) - c)^2",steps:["2(X(Xa + b) - c)'(dX(Xa + b) + X dX a)","2tr((Xa + b)(X(Xa + b) - c)'dX) + 2tr(a(X(Xa + b) - c)'X dX)"],ans:"2(X(Xa + b) - c)(Xa + b)' + 2X'(X(Xa + b) - c)a'"},
+ {w:["lse","prod","cyc"],L:8,v:'X',f:"lse(X^2 b) - c'X^2 b",steps:["(softmax(X^2 b) - c)'(dX Xb + X dX b)","tr(Xb(softmax(X^2 b) - c)'dX) + tr(b(softmax(X^2 b) - c)'X dX)"],ans:"(softmax(X^2 b) - c)b'X' + X'(softmax(X^2 b) - c)b'"},
+ {w:["sig","prod","cyc"],L:8,v:'X',f:"sigma(a'X^2 b)",s:"sigma(a'X^2 b)",steps:["s(1 - s)(a'dX Xb + a'X dX b)","s(1 - s)(tr(Xba'dX) + tr(ba'X dX))"],ans:"s(1 - s)(ab'X' + X'ab')"},
+ {w:["tanh","prod","cyc"],L:8,v:'X',f:"c'tanh(X tanh(Xa))",steps:["c'(I - diag(tanh(X tanh(Xa)))^2)(dX tanh(Xa) + X(I - diag(tanh(Xa))^2)dX a)","tr(tanh(Xa)c'(I - diag(tanh(X tanh(Xa)))^2)dX) + tr(ac'(I - diag(tanh(X tanh(Xa)))^2)X(I - diag(tanh(Xa))^2)dX)"],ans:"(I - diag(tanh(X tanh(Xa)))^2)c tanh(Xa)' + (I - diag(tanh(Xa))^2)X'(I - diag(tanh(X tanh(Xa)))^2)ca'"},
+ // level 9 · reinforcement learning
+ {w:["lse","sca"],L:9,v:'X',f:"c'Xa - lse(Xa)",steps:["c'dX a - softmax(Xa)'dX a","tr(a(c - softmax(Xa))'dX)"],ans:"(c - softmax(Xa))a'"},
+ {w:["lse","collect"],L:9,v:'x',f:"c'Ax - lse(Ax)",steps:["c'A dx - softmax(Ax)'A dx","(c - softmax(Ax))'A dx"],pre:"((c - softmax(Ax))'A)'",ans:"A'(c - softmax(Ax))"},
+ {w:["smax","sca"],L:9,v:'X',f:"c'softmax(Xa)",steps:["c'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX a","tr(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')dX)"],pre:"(ac'(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)'))'",ans:"(diag(softmax(Xa)) - softmax(Xa)softmax(Xa)')ca'"},
+ {w:["smax"],L:9,v:'x',f:"c'softmax(x)",steps:["c'(diag(softmax(x)) - softmax(x)softmax(x)')dx"],pre:"(c'(diag(softmax(x)) - softmax(x)softmax(x)'))'",ans:"(diag(softmax(x)) - softmax(x)softmax(x)')c"},
+ {w:["norm","sca"],L:9,v:'X',f:"1/2 norm(Xa - b)^2",steps:["(Xa - b)'dX a","tr(a(Xa - b)'dX)"],ans:"(Xa - b)a'"},
+ {w:["norm","sca"],L:9,v:'X',f:"norm(Xa - Xc - b)^2",steps:["2(Xa - Xc - b)'dX(a - c)","2tr((a - c)(Xa - Xc - b)'dX)"],ans:"2(Xa - Xc - b)(a - c)'"},
+ {w:["norm"],L:9,v:'x',f:"norm(Ax - Bx - b)^2",steps:["2(Ax - Bx - b)'(A - B)dx"],pre:"2((Ax - Bx - b)'(A - B))'",ans:"2(A - B)'(Ax - Bx - b)"},
+ {w:["lse","sca"],L:9,v:'X',f:"lse(Xa)",steps:["softmax(Xa)'dX a","tr(a softmax(Xa)'dX)"],ans:"softmax(Xa)a'"},
+ {w:["lse","sca","norm"],L:9,v:'X',f:"c'Xa - lse(Xa) - 1/2 normF(X)^2",steps:["c'dX a - softmax(Xa)'dX a - tr(X'dX)","tr(a(c - softmax(Xa))'dX) - tr(X'dX)"],ans:"(c - softmax(Xa))a' - X"},
  {w:["lse", "sca"],L:4,v:'X',f:"lse(Xa) - b'Xa",steps:["(softmax(Xa) - b)'dX a","tr(a(softmax(Xa) - b)'dX)"],ans:"(softmax(Xa) - b)a'"},
 ];
 const CURP=CUR.map(c=>({w:c.w,L:c.L,v:c.v,sym:c.sym||[],pos:!!c.pos,
@@ -484,7 +550,21 @@ function genInverse(){
   return{w:['inv','cyc'],L:3,v:'X',sym:b.sym,cond:null,s:null,gen:true,f:subInv(b.f),steps:[s1,s2],
     pre:{k:'neg',a:kk(A_.T(A_.par(A_.mul(A_.mul(Xi,Gp),Xi))))},ans:{k:'neg',a:c&&c!==1?A_.mul(A_.num(c),core):core}}
 }
+/* topic sections: weighted sums of two curated problems from the same section */
+const plain=n=>R(n).replace(/<[^>]+>/g,'');
+function genSection(L){
+  const pool=CURP.filter(p=>p.L===L&&!p.cond&&!p.s&&!p.sym.length&&plain(p.ans).length<=34);
+  for(let t=0;t<40;t++){
+    const v=Math.random()<.4?'x':'X',cand=pool.filter(p=>p.v===v);if(cand.length<2)continue;
+    const b=cand[Math.floor(Math.random()*cand.length)],q=cand[Math.floor(Math.random()*cand.length)];
+    const u1=b.f,u2=ren(q.f,SWAP);if(R(u1)===R(u2))continue;
+    const d1=lastStep(b),d2=ren(lastStep(q),SWAP),g1=b.ans,g2=ren(q.ans,SWAP);
+    if(plain(g1).length+plain(g2).length>64)continue;
+    const out={w:['lin'],L,v,sym:[],cond:null,s:null,pre:null,gen:true};
+    out.f=A_.add(u1,u2);out.steps=[A_.add(d1,d2)];out.ans=A_.add(g1,g2);return out}
+  return null}
 function generate(level){
+  if(level>=5)return genSection(level);
   if(level===1)return genLinear();
   if(level===3)return genInverse();
   const v=Math.random()<.5?'x':'X';
@@ -527,12 +607,13 @@ function mutate(ans){
   return Math.random()<.5?A_.mul(A_.num(2),ans):A_.T(A_.par(ans));
 }
 
+const TOPICS={ml:5,nn:6,tf:7,rnn:8,rl:9};
 /* ---------- instantiate a problem with fresh letters and test values ---------- */
 let lastKey='';
 function pickSpec(level){
-  const lv=level==='all'?1+Math.floor(Math.random()*4):+level;
+  const lv=level==='all'?1+Math.floor(Math.random()*4):(TOPICS[level]||+level);
   const genShare=lv===2?.25:.5;
-  if(Math.random()<genShare)return generate(lv);
+  if(Math.random()<genShare){const g=generate(lv);if(g)return g}
   const pool=CURP.filter(p=>p.L===lv);let s;
   for(let i=0;i<10;i++){s=pool[Math.floor(Math.random()*pool.length)];if(R(s.f)!==lastKey)break}
   lastKey=R(s.f);return s;
@@ -690,11 +771,16 @@ function syncChips(){
   if($('mbest'))$('mbest').textContent=`best ${getBest()}`;
   document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
   document.querySelectorAll('#durs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.d===dur));
-  document.querySelectorAll('#lvls button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===level));
+  document.querySelectorAll('#lvls button,#topics button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===level));
   $('lvlhint').innerHTML={'1':`<i>a</i><sup>⊤</sup><i>x</i>, &nbsp;tr(<i>AXB</i>), &nbsp;<i>a</i><sup>⊤</sup><i>Xb</i>`,
     '2':`<i>x</i><sup>⊤</sup><i>Ax</i>, &nbsp;‖<i>Ax</i> − <i>b</i>‖<sup>2</sup>, &nbsp;tr(<i>X</i><sup>⊤</sup><i>AX</i>)`,
     '3':`log det <i>X</i>, &nbsp;tr(<i>X</i><sup>−1</sup><i>A</i>), &nbsp;<i>a</i><sup>⊤</sup><i>X</i><sup>−1</sup><i>b</i>`,
     '4':`σ(<i>a</i><sup>⊤</sup><i>x</i>), &nbsp;log Σ exp(<i>x<sub>i</sub></i>), &nbsp;(<i>a</i><sup>⊤</sup><i>x</i>)<sup>2</sup>`,
+    'ml':`least squares, &nbsp;ridge, &nbsp;logistic loss, &nbsp;Rayleigh quotient`,
+    'nn':`tanh and sigmoid layers, &nbsp;softmax cross-entropy, &nbsp;backprop`,
+    'tf':`query-key scores, &nbsp;softmax attention, &nbsp;residual paths`,
+    'rnn':`shared weights, &nbsp;<i>W</i><sup>2</sup><i>h</i>, &nbsp;unrolled steps`,
+    'rl':`policy gradients, &nbsp;softmax policies, &nbsp;Bellman residuals`,
     'all':'a bit of everything'}[level];
 }
 function render(p){
@@ -782,7 +868,7 @@ function finish(complete){
 }
 document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;syncChips()}));
 document.querySelectorAll('#durs button').forEach(b=>b.addEventListener('click',()=>{dur=+b.dataset.d;syncChips()}));
-document.querySelectorAll('#lvls button').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.l;syncChips()}));
+document.querySelectorAll('#lvls button,#topics button').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.l;syncChips()}));
 $('misses').addEventListener('click',e=>{
   const t=e.target.closest('.tag');if(t){const r=t.nextElementSibling;r.hidden=!r.hidden;return}
   const sb=e.target.closest('.solb');if(sb){const it=sb.closest('.item'),was=it.classList.contains('open');
