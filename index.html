@@ -106,7 +106,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
   </svg><div class="tools"><button id="theme" aria-label="Toggle dark mode">◐</button></div></header>
 
   <section id="setup" class="col">
-    <div class="seg" id="modes"><button data-mode="type" id="m-type">type</button><button data-mode="mc" id="m-mc">choice</button></div>
     <div class="seg" id="lvls"><button data-l="1" id="l-1">linear</button><button data-l="2" id="l-2">quadratic</button><button data-l="3" id="l-3">inverse</button><button data-l="4" id="l-4">chain</button><button data-l="all" id="l-all">mixed</button></div>
     <div class="lvlhint" id="lvlhint"></div>
     <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
@@ -551,8 +550,8 @@ const sub=s=>{for(const[a,b]of SUBS)s=s.split(a).join(b);return s};
 const KEYS=[['ᵀ',"'",'ᵀ'],['⁻¹','~','⁻¹'],['⁻ᵀ','"','⁻ᵀ'],['²','','²'],['tr','','tr('],['det','','det('],['‖ ‖','','‖‖',1],['I','','I'],['(','','('],[')','',')'],['→','tab','SKIP']];
 
 /* ---------- game ---------- */
-let mode=store.get('nablamac:mode2')||'type',dur=+(store.get('nablamac:dur')||120),level=store.get('nablamac:level')||'all',showSol=store.get('nablamac:sol')==='1';
-if(!['type','mc'].includes(mode))mode='type';
+let mode='mc',dur=+(store.get('nablamac:dur')||120),level=store.get('nablamac:level')||'all',showSol=store.get('nablamac:sol')==='1';
+
 let st=null;
 const bestKey=()=>`nablamac:best3:${mode}:${level}:${dur}`;
 const getBest=()=>+(store.get(bestKey())||0);
