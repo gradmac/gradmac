@@ -1,11 +1,28 @@
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  google_sub TEXT NOT NULL UNIQUE,
+  username TEXT UNIQUE COLLATE NOCASE,
+  domain TEXT,
+  tag TEXT,
+  show_tag INTEGER NOT NULL DEFAULT 1,
+  created INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  created INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS scores (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   board TEXT NOT NULL,
-  name TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
   score INTEGER NOT NULL,
   created INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS scores_board_score ON scores (board, score DESC);
+CREATE INDEX IF NOT EXISTS scores_board_user ON scores (board, user_id);
 
 CREATE TABLE IF NOT EXISTS used_tokens (
   id TEXT PRIMARY KEY,

@@ -50,8 +50,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
 .lb li{display:grid;grid-template-columns:3ch minmax(0,1fr) auto;gap:10px;padding:5px 0;border-top:1px solid var(--line)}
 .lb li span:first-child{color:var(--mute)}.lb li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb li.me{font-weight:600}
-.post{display:flex;gap:6px;justify-content:center}
-#pname{font:15px var(--f-num);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:12em;min-width:0}
+.lb li .tg{color:var(--mute);font-weight:400;font-size:12px;margin-left:8px}
+.filt button{padding:4px 10px;font-size:12px}
+.acct{border:0;font-size:13px;padding:0 8px;height:34px;color:var(--fg)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
+.panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:21;width:min(360px,calc(100vw - 32px));background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:24px 20px 20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+.ptitle{font-size:15px;font-weight:600}
+#pbody{display:flex;flex-direction:column;gap:12px;align-items:center;width:100%}
+#pbody p{margin:0;font-size:12.5px;color:var(--mute);line-height:1.5}
+.pmsg{font-size:12.5px;min-height:1em;color:var(--fg)}
+.pclose{position:absolute;top:6px;right:6px;border:0;font-size:20px;width:32px;height:32px;line-height:1}
+.field{font:16px var(--f-num);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:9px 10px;width:100%}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.check input{width:16px;height:16px;accent-color:var(--fg)}
+.linkbtn{border:0;font-size:12.5px;color:var(--mute);text-decoration:underline;padding:4px}
 .go{background:var(--fg);color:var(--bg);border-color:var(--fg);padding:10px 28px;font-size:15px;font-weight:600}
 .top{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;color:var(--mute)}
 .top b{color:var(--fg);font-weight:600}
@@ -112,7 +124,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <path d="M7.6 16.2L17 34.6" stroke-width="4.2" stroke-linecap="butt"/>
     <path d="M17 36.5L16 40.5M17 36.5L18 40.5" stroke-width="1.6"/>
     <path transform="translate(41 35) scale(0.02783)" fill="currentColor" stroke="none" d="M286 217Q218 217 168.0 202.5Q118 188 90.0 159.0Q62 130 62 86Q62 57 82.0 30.0Q102 3 140 -17V-21Q121 -33 105.5 -52.5Q90 -72 90 -103Q90 -127 106.0 -152.0Q122 -177 149 -195V-199Q123 -218 104.5 -250.5Q86 -283 86 -326Q86 -383 114.0 -422.5Q142 -462 188.0 -482.5Q234 -503 288 -503Q332 -503 365 -491H566V-403H453Q466 -389 475.5 -367.5Q485 -346 485 -322Q485 -268 458.5 -230.5Q432 -193 388.0 -174.0Q344 -155 288 -155Q271 -155 251.5 -158.5Q232 -162 213 -169Q198 -160 190.5 -149.0Q183 -138 183 -123Q183 -100 206.5 -88.5Q230 -77 276 -77H376Q472 -77 520.5 -49.5Q569 -22 569 43Q569 91 534.5 131.0Q500 171 436.5 194.0Q373 217 286 217ZM288 -228Q314 -228 335.0 -239.5Q356 -251 368.5 -273.0Q381 -295 381 -326Q381 -356 368.5 -377.5Q356 -399 335.0 -411.0Q314 -423 288 -423Q263 -423 242.0 -411.0Q221 -399 208.0 -377.5Q195 -356 195 -326Q195 -295 208.0 -273.0Q221 -251 242.0 -239.5Q263 -228 288 -228ZM300 141Q348 141 383.5 130.0Q419 119 438.5 101.0Q458 83 458 62Q458 33 433.5 23.5Q409 14 359 14H281Q257 14 239.0 12.0Q221 10 206 7Q180 22 169.0 38.0Q158 54 158 71Q158 104 195.0 122.5Q232 141 300 141Z M730 0V-491H825L835 -380H838Q875 -440 929.5 -471.5Q984 -503 1047 -503Q1077 -503 1099.0 -498.0Q1121 -493 1142 -483L1118 -386Q1094 -394 1075.5 -397.5Q1057 -401 1029 -401Q979 -401 931.5 -372.0Q884 -343 846 -271V0Z M1435 12Q1387 12 1350.0 -6.5Q1313 -25 1292.0 -57.0Q1271 -89 1271 -132Q1271 -214 1349.5 -257.5Q1428 -301 1610 -314Q1608 -341 1595.5 -363.0Q1583 -385 1558.0 -397.5Q1533 -410 1493 -410Q1465 -410 1438.0 -403.0Q1411 -396 1384.5 -384.0Q1358 -372 1332 -358L1290 -435Q1320 -453 1356.0 -468.5Q1392 -484 1432.0 -493.5Q1472 -503 1514 -503Q1583 -503 1629.5 -478.5Q1676 -454 1700.5 -406.5Q1725 -359 1725 -291V0H1631L1622 -61H1619Q1580 -31 1532.5 -9.5Q1485 12 1435 12ZM1470 -78Q1507 -78 1541.5 -94.5Q1576 -111 1610 -138V-242Q1522 -236 1472.0 -222.5Q1422 -209 1402.0 -188.0Q1382 -167 1382 -141Q1382 -119 1394.0 -105.0Q1406 -91 1425.5 -84.5Q1445 -78 1470 -78Z M2063 12Q1969 12 1911.0 -56.0Q1853 -124 1853 -245Q1853 -325 1884.0 -383.0Q1915 -441 1965.0 -472.0Q2015 -503 2070 -503Q2112 -503 2144.5 -488.0Q2177 -473 2205 -445H2208L2202 -528V-706H2318V0H2223L2214 -57H2211Q2183 -29 2144.0 -8.5Q2105 12 2063 12ZM2091 -83Q2121 -83 2149.0 -97.5Q2177 -112 2202 -142V-363Q2176 -388 2150.0 -398.0Q2124 -408 2097 -408Q2063 -408 2034.5 -389.0Q2006 -370 1989.0 -334.0Q1972 -298 1972 -246Q1972 -167 2003.5 -125.0Q2035 -83 2091 -83Z M2697 0V-400H2484V-491H2812V0ZM2746 -581Q2711 -581 2687.5 -602.0Q2664 -623 2664 -658Q2664 -693 2687.5 -714.5Q2711 -736 2746 -736Q2782 -736 2805.0 -714.5Q2828 -693 2828 -658Q2828 -623 2805.0 -602.0Q2782 -581 2746 -581Z M3330 12Q3255 12 3194.0 -18.5Q3133 -49 3097.0 -106.5Q3061 -164 3061 -246Q3061 -326 3097.0 -383.5Q3133 -441 3191.0 -472.0Q3249 -503 3315 -503Q3388 -503 3438.5 -473.0Q3489 -443 3515.5 -390.5Q3542 -338 3542 -270Q3542 -253 3540.5 -237.5Q3539 -222 3537 -212H3144V-294H3463L3441 -268Q3441 -341 3408.5 -377.5Q3376 -414 3318 -414Q3277 -414 3244.5 -395.0Q3212 -376 3193.0 -338.5Q3174 -301 3174 -246Q3174 -189 3195.5 -152.0Q3217 -115 3255.5 -96.0Q3294 -77 3345 -77Q3384 -77 3417.0 -88.0Q3450 -99 3483 -118L3522 -46Q3483 -21 3434.0 -4.5Q3385 12 3330 12Z M3682 0V-491H3777L3786 -417H3790Q3825 -453 3867.5 -478.0Q3910 -503 3967 -503Q4052 -503 4092.0 -451.0Q4132 -399 4132 -304V0H4016V-289Q4016 -348 3995.0 -376.0Q3974 -404 3924 -404Q3888 -404 3860.0 -387.0Q3832 -370 3798 -335V0Z M4591 12Q4516 12 4472.0 -14.5Q4428 -41 4409.0 -88.0Q4390 -135 4390 -197V-400H4259V-486L4395 -491L4410 -645H4505V-491H4729V-400H4505V-198Q4505 -158 4516.0 -131.5Q4527 -105 4552.0 -92.5Q4577 -80 4618 -80Q4650 -80 4676.0 -85.0Q4702 -90 4726 -99L4748 -16Q4715 -5 4677.0 3.5Q4639 12 4591 12Z M5686 217Q5618 217 5568.0 202.5Q5518 188 5490.0 159.0Q5462 130 5462 86Q5462 57 5482.0 30.0Q5502 3 5540 -17V-21Q5521 -33 5505.5 -52.5Q5490 -72 5490 -103Q5490 -127 5506.0 -152.0Q5522 -177 5549 -195V-199Q5523 -218 5504.5 -250.5Q5486 -283 5486 -326Q5486 -383 5514.0 -422.5Q5542 -462 5588.0 -482.5Q5634 -503 5688 -503Q5732 -503 5765 -491H5966V-403H5853Q5866 -389 5875.5 -367.5Q5885 -346 5885 -322Q5885 -268 5858.5 -230.5Q5832 -193 5788.0 -174.0Q5744 -155 5688 -155Q5671 -155 5651.5 -158.5Q5632 -162 5613 -169Q5598 -160 5590.5 -149.0Q5583 -138 5583 -123Q5583 -100 5606.5 -88.5Q5630 -77 5676 -77H5776Q5872 -77 5920.5 -49.5Q5969 -22 5969 43Q5969 91 5934.5 131.0Q5900 171 5836.5 194.0Q5773 217 5686 217ZM5688 -228Q5714 -228 5735.0 -239.5Q5756 -251 5768.5 -273.0Q5781 -295 5781 -326Q5781 -356 5768.5 -377.5Q5756 -399 5735.0 -411.0Q5714 -423 5688 -423Q5663 -423 5642.0 -411.0Q5621 -399 5608.0 -377.5Q5595 -356 5595 -326Q5595 -295 5608.0 -273.0Q5621 -251 5642.0 -239.5Q5663 -228 5688 -228ZM5700 141Q5748 141 5783.5 130.0Q5819 119 5838.5 101.0Q5858 83 5858 62Q5858 33 5833.5 23.5Q5809 14 5759 14H5681Q5657 14 5639.0 12.0Q5621 10 5606 7Q5580 22 5569.0 38.0Q5558 54 5558 71Q5558 104 5595.0 122.5Q5632 141 5700 141Z M6300 12Q6235 12 6179.0 -18.5Q6123 -49 6088.0 -106.5Q6053 -164 6053 -245Q6053 -327 6088.0 -384.5Q6123 -442 6179.0 -472.5Q6235 -503 6300 -503Q6365 -503 6421.0 -472.5Q6477 -442 6512.0 -384.5Q6547 -327 6547 -245Q6547 -164 6512.0 -106.5Q6477 -49 6421.0 -18.5Q6365 12 6300 12ZM6300 -82Q6340 -82 6369.0 -102.0Q6398 -122 6413.0 -159.0Q6428 -196 6428 -245Q6428 -294 6413.0 -331.0Q6398 -368 6369.0 -388.5Q6340 -409 6300 -409Q6260 -409 6231.5 -388.5Q6203 -368 6187.5 -331.0Q6172 -294 6172 -245Q6172 -196 6187.5 -159.0Q6203 -122 6231.5 -102.0Q6260 -82 6300 -82Z M6835 12Q6787 12 6750.0 -6.5Q6713 -25 6692.0 -57.0Q6671 -89 6671 -132Q6671 -214 6749.5 -257.5Q6828 -301 7010 -314Q7008 -341 6995.5 -363.0Q6983 -385 6958.0 -397.5Q6933 -410 6893 -410Q6865 -410 6838.0 -403.0Q6811 -396 6784.5 -384.0Q6758 -372 6732 -358L6690 -435Q6720 -453 6756.0 -468.5Q6792 -484 6832.0 -493.5Q6872 -503 6914 -503Q6983 -503 7029.5 -478.5Q7076 -454 7100.5 -406.5Q7125 -359 7125 -291V0H7031L7022 -61H7019Q6980 -31 6932.5 -9.5Q6885 12 6835 12ZM6870 -78Q6907 -78 6941.5 -94.5Q6976 -111 7010 -138V-242Q6922 -236 6872.0 -222.5Q6822 -209 6802.0 -188.0Q6782 -167 6782 -141Q6782 -119 6794.0 -105.0Q6806 -91 6825.5 -84.5Q6845 -78 6870 -78Z M7591 12Q7516 12 7472.0 -14.5Q7428 -41 7409.0 -88.0Q7390 -135 7390 -197V-400H7259V-486L7395 -491L7410 -645H7505V-491H7729V-400H7505V-198Q7505 -158 7516.0 -131.5Q7527 -105 7552.0 -92.5Q7577 -80 7618 -80Q7650 -80 7676.0 -85.0Q7702 -90 7726 -99L7748 -16Q7715 -5 7677.0 3.5Q7639 12 7591 12Z"/>
-  </svg><div class="tools"><button id="theme" aria-label="Toggle dark mode">◐</button></div></header>
+  </svg><div class="tools"><button id="acct" class="acct" hidden></button><button id="theme" aria-label="Toggle dark mode">◐</button></div></header>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="ptitle" hidden>
+    <div class="ptitle" id="ptitle"></div>
+    <div id="pbody"></div>
+    <div class="pmsg" id="pmsg"></div>
+    <button class="pclose" id="pclose" aria-label="Close">×</button>
+  </div>
 
   <section id="setup" class="col">
     <div class="seg" id="lvls"><button data-l="1" id="l-1">linear</button><button data-l="2" id="l-2">quadratic</button><button data-l="3" id="l-3">inverse</button><button data-l="4" id="l-4">chain</button><button data-l="all" id="l-all">mixed</button></div>
@@ -120,6 +139,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
     <div class="seg" id="durs"><button data-d="15" id="d-15">15</button><button data-d="30" id="d-30">30</button><button data-d="60" id="d-60">60</button><button data-d="120" id="d-120">120</button><button data-d="300" id="d-300">300</button></div>
     <button class="go" id="start">start</button>
     <div class="sub" id="mbest"></div>
+    <div class="seg filt" id="filt" hidden></div>
     <ol class="lb" id="lb" hidden></ol>
   </section>
 
@@ -131,9 +151,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-off
   <section id="done" class="col" hidden>
     <div class="big" id="final">0</div>
     <div class="sub" id="stats"></div>
-    <form class="post" id="post" hidden><input id="pname" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="your name" aria-label="Name for the leaderboard"><button class="go" type="submit">post</button></form>
+    <button class="go" id="postbtn" type="button" hidden>post score</button>
     <div class="sub" id="postmsg"></div>
     <div class="seg"><button class="go" id="again">again</button><button id="back" style="padding:10px 18px">menu</button></div>
+    <div class="seg filt" id="filt2" hidden></div>
     <ol class="lb" id="lb2" hidden></ol>
     <button id="solbtn" hidden></button>
     <div class="rv" id="misses"></div>
@@ -568,17 +589,78 @@ let mode='mc',dur=+(store.get('nablamac:dur')||120),level=store.get('nablamac:le
 let st=null;
 const bestKey=()=>`nablamac:best3:${mode}:${level}:${dur}`;
 const getBest=()=>+(store.get(bestKey())||0);
-/* ---------- leaderboard (served by the site's /api; hidden anywhere it isn't) ---------- */
+/* ---------- accounts and leaderboard (served by the site's /api; hidden anywhere it isn't) ---------- */
 const API='/api',apiOK=/^https?:$/.test(location.protocol);
 const board=()=>`${level}:${dur}`;
-async function loadBoard(el,b=board(),hi){
+let me={signedIn:false},cfg=null,pendingPost=false,filt=store.get('gg:filt')==='tag'?'tag':'all';
+const myTag=()=>me.signedIn&&me.tag&&me.showTag?me.tag:null;
+async function api(path,body){const r=await fetch(API+path,body===undefined?{cache:'no-cache'}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,j}}
+function renderFilters(){const t=myTag();if(!t&&filt==='tag')filt='all';
+  for(const id of ['filt','filt2']){const el=$(id);if(!el)continue;el.hidden=!t;if(!t)continue;
+    el.replaceChildren(...[['all','everyone'],['tag',t]].map(([v,l])=>{const b=document.createElement('button');b.type='button';b.textContent=l;b.setAttribute('aria-pressed',filt===v);
+      b.addEventListener('click',()=>{filt=v;store.set('gg:filt',v);renderFilters();loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'))});return b}))}}
+async function loadBoard(el,b=board()){
   if(!apiOK){el.hidden=true;return}
-  try{const r=await fetch(`${API}/scores?board=${encodeURIComponent(b)}`,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();
+  const tag=filt==='tag'?myTag():null;
+  try{const {ok,j}=await api(`/scores?board=${encodeURIComponent(b)}`+(tag?`&tag=${encodeURIComponent(tag)}`:''));if(!ok)throw 0;
     if(b!==board())return;
     el.replaceChildren(...j.top.map((t,i)=>{const li=document.createElement('li');
       const a=document.createElement('span');a.textContent=i+1;const n=document.createElement('span');n.textContent=t.name;
-      const sc=document.createElement('b');sc.textContent=t.score;li.append(a,n,sc);if(hi&&t.name===hi)li.className='me';return li}));
+      if(t.tag){const g=document.createElement('span');g.className='tg';g.textContent=t.tag;n.append(g)}
+      const sc=document.createElement('b');sc.textContent=t.score;li.append(a,n,sc);if(me.username&&t.name===me.username)li.className='me';return li}));
     el.hidden=!j.top.length}catch(e){el.hidden=true}}
+function renderAcct(){const b=$('acct');b.hidden=!apiOK;b.textContent=me.signedIn&&me.username?'@'+me.username:'sign in';renderFilters();renderPostBtn()}
+async function loadMe(){if(!apiOK)return;try{const {ok,j}=await api('/me');if(ok)me=j}catch(e){}renderAcct()}
+/* panel */
+function closePanel(){$('panel').hidden=true;$('scrim').hidden=true;pendingPost=false}
+function panelMsg(t){$('pmsg').textContent=t||''}
+let gsiLoad=null;
+function loadGsi(){return gsiLoad||(gsiLoad=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;sc.onload=res;sc.onerror=()=>{gsiLoad=null;rej()};document.head.append(sc)}))}
+async function openPanel(){
+  $('panel').hidden=false;$('scrim').hidden=false;panelMsg('');const body=$('pbody');
+  if(!me.signedIn){
+    $('ptitle').textContent=pendingPost?'sign in to post your score':'sign in';
+    body.innerHTML='<div id="gsi"></div><p>Signing in is only needed for the leaderboard. We keep your username and, for school or work Google accounts, the school or company name. Never your email.</p>';
+    try{if(!cfg){const {j}=await api('/config');cfg=j}
+      if(!cfg.googleClientId){panelMsg('Sign-in isn’t set up yet.');return}
+      await loadGsi();
+      google.accounts.id.initialize({client_id:cfg.googleClientId,callback:onCredential,auto_select:false,itp_support:true,use_fedcm_for_prompt:true});
+      const dark=getComputedStyle(document.body).backgroundColor==='rgb(0, 0, 0)';
+      google.accounts.id.renderButton($('gsi'),{theme:dark?'filled_black':'outline',size:'large',text:'signin_with',shape:'rectangular',width:260});
+    }catch(e){panelMsg('Couldn’t load Google sign-in. Check your connection and try again.')}
+    return}
+  if(!me.username){
+    $('ptitle').textContent='pick your username';
+    body.innerHTML=`<p>This is how you'll appear on the leaderboard. You can't change it later.</p>
+      <form id="uform" style="display:flex;flex-direction:column;gap:12px;width:100%"><input class="field" id="uname" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="username" aria-label="Username">
+      ${me.tag?`<label class="check"><input type="checkbox" id="showtag" checked> show my <b></b> tag</label>`:''}
+      <button class="go" type="submit">save</button></form>`;
+    if(me.tag)body.querySelector('.check b').textContent=me.tag;
+    $('uform').addEventListener('submit',async e=>{e.preventDefault();const u=$('uname').value.trim();
+      if(!/^[A-Za-z0-9_.-]{3,16}$/.test(u)){panelMsg('3–16 letters, digits, . _ or -');return}
+      panelMsg('saving…');const {ok,j}=await api('/me',{username:u,showTag:me.tag?$('showtag').checked:true});
+      if(!ok){panelMsg(j.error||'couldn’t save');return}
+      me=j;renderAcct();finishSignIn()});
+    setTimeout(()=>$('uname').focus(),0);return}
+  $('ptitle').textContent='@'+me.username;
+  body.innerHTML=(me.tag?`<label class="check"><input type="checkbox" id="showtag2"${me.showTag?' checked':''}> show my <b></b> tag</label>`:'<p>No school or company tag. Tags come from school or work Google accounts.</p>')
+    +'<button class="linkbtn" id="signout" type="button">sign out</button>';
+  if(me.tag){body.querySelector('.check b').textContent=me.tag;
+    $('showtag2').addEventListener('change',async e=>{const {ok,j}=await api('/me',{showTag:e.target.checked});if(ok){me=j;renderAcct();loadBoard($('lb'))}})}
+  $('signout').addEventListener('click',async()=>{await api('/logout',{});me={signedIn:false};renderAcct();closePanel();loadBoard($('lb'))});
+}
+async function onCredential(resp){
+  panelMsg('signing in…');
+  const {ok,j}=await api('/auth/google',{credential:resp.credential});
+  if(!ok){panelMsg(j.error||'sign-in failed');return}
+  me=j;renderAcct();
+  if(!me.username){openPanel();return}
+  finishSignIn()}
+function finishSignIn(){const post=pendingPost;$('panel').hidden=true;$('scrim').hidden=true;pendingPost=false;loadBoard($('lb'));if(!$('done').hidden)loadBoard($('lb2'));if(post)postScore()}
+$('acct').addEventListener('click',()=>{pendingPost=false;openPanel()});
+$('pclose').addEventListener('click',closePanel);$('scrim').addEventListener('click',closePanel);
+function renderPostBtn(){const b=$('postbtn');if(!b)return;b.textContent=me.signedIn&&me.username?'post score':'sign in to post'}
 let lbTimer=0,lastRun=null;
 function syncChips(){
   clearTimeout(lbTimer);lbTimer=setTimeout(()=>loadBoard($('lb')),150);
@@ -671,7 +753,7 @@ function finish(complete){
   $('stats').textContent=`best ${Math.max(prev,s.score)}`+(s.times.length?` · ${(s.times.reduce((a,b)=>a+b,0)/s.times.length/1000).toFixed(1)} s each`:'');
   $('misses').innerHTML=s.misses.map(solHTML).join('');activeItem=null;
   lastRun={token:s.token||null,score:s.score,board:board(),tries:0};
-  $('post').hidden=!(lastRun.token&&s.score>0);$('postmsg').textContent='';$('pname').value=store.get('gradmac:name')||'';
+  $('postbtn').hidden=!(lastRun.token&&s.score>0);$('postmsg').textContent='';renderPostBtn();
   loadBoard($('lb2'));
   $('again').focus();
 }
@@ -687,23 +769,24 @@ $('misses').addEventListener('click',e=>{
 $('solbtn').addEventListener('click',()=>{showSol=!showSol;store.set('nablamac:sol',showSol?'1':'0');syncSol()});
 $('start').addEventListener('click',start);$('again').addEventListener('click',start);
 async function postScore(){
-  const name=$('pname').value.trim();if(!lastRun||!lastRun.token)return;
-  if(!/^[A-Za-z0-9_.\- ]{1,16}$/.test(name)){$('postmsg').textContent='name: 1–16 letters, digits, spaces, . _ -';return}
+  if(!lastRun||!lastRun.token)return;
+  if(!me.signedIn||!me.username){pendingPost=true;openPanel();return}
   $('postmsg').textContent='posting…';
-  try{const r=await fetch(`${API}/scores`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:lastRun.token,name,score:lastRun.score})});
-    const j=await r.json().catch(()=>({}));
-    if(r.ok){store.set('gradmac:name',name);$('post').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');loadBoard($('lb2'),lastRun.board,name);return}
+  try{const {ok,status,j}=await api('/scores',{token:lastRun.token,score:lastRun.score});
+    if(ok){$('postbtn').hidden=true;$('postmsg').textContent=`#${j.rank} on the board`+(j.best>lastRun.score?` with your best of ${j.best}`:'');loadBoard($('lb2'),lastRun.board);return}
+    if(status===401){me={signedIn:false};renderAcct();$('postmsg').textContent='';pendingPost=true;openPanel();return}
     if(j.error==='run not finished'&&lastRun.tries++<2){setTimeout(postScore,2000);return}
     $('postmsg').textContent=j.error||'could not post'}
   catch(e){$('postmsg').textContent='could not reach the leaderboard'}}
-$('post').addEventListener('submit',e=>{e.preventDefault();postScore()});
+$('postbtn').addEventListener('click',postScore);
 $('back').addEventListener('click',()=>{sand(1);$('done').hidden=true;$('setup').hidden=false;syncChips()});
 document.addEventListener('keydown',e=>{
+  if(!$('panel').hidden){if(e.key==='Escape')closePanel();return}
   if(st){if(e.key==='Escape')return finish(false);if(mode==='mc'&&/^[1-4]$/.test(e.key)){e.preventDefault();choose(+e.key-1)}return}
   if(activeItem&&!$('done').hidden&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();stepItem(activeItem,e.key==='ArrowRight'?1:-1);return}
   if(e.key==='Enter'&&!(document.activeElement&&['BUTTON','INPUT'].includes(document.activeElement.tagName))){e.preventDefault();start()}
 });
-syncChips();sand(1);
+syncChips();sand(1);loadMe().then(()=>loadBoard($('lb')));
 window.__nm={makeProblem,check,sub};
 })();
 </script>

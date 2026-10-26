@@ -7,3 +7,7 @@ binding = "DB"
 database_name = "gradmac"
 # The gradmac D1 database in Cloudflare.
 database_id = "08b9afe1-1599-4759-a9c8-f43d2ec15e1c"
+
+[vars]
+# Public OAuth client ID from Google Cloud (not a secret). Empty until Google sign-in is set up.
+GOOGLE_CLIENT_ID = ""

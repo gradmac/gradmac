@@ -47,20 +47,22 @@ wrangler.toml      Cloudflare config (D1 binding)
 
 Every push to `main` deploys automatically.
 
-## Leaderboard
+## Accounts and leaderboard
 
-There is one board per level and duration. It shows the top 10, with each name's best score.
+- **Sign-in.** Players sign in with Google to post scores; playing needs no account. Sessions last a year, so returning players post with one tap.
+- **Usernames.** Each Google account picks a username once, on first sign-in, and keeps it.
+- **Tags.** Tags come only from Google Workspace accounts (school or work email, e.g. `@berkeley.edu` becomes **Berkeley**). Personal Gmail gets no tag. Showing the tag is the player's choice. Stored per user: Google's account ID, username, and the school or company domain. Never the email address.
+- **Boards.** One board per level and duration, top 10 by each player's best, filterable to the player's own school or company.
+- **Run checks.** A run gets a signed token when it starts. A score is accepted once per token, only after the full duration, and at most 1.2 points per second.
 
-- When a run starts, the server signs a token recording the board and the start time. The signing key is generated on first use and stored in the database, so there is no secret to configure.
-- A score is accepted only after that run's full duration has passed, within 10 minutes of the end, once per token, and at most 1.2 points per second.
-- Names are 1–16 letters, digits, spaces, `.`, `_` or `-`.
+Google sign-in needs a Google Cloud OAuth client ID (a public value), set as `GOOGLE_CLIENT_ID` in `wrangler.toml`. Its authorized JavaScript origins must include every domain the site is served from.
 
-These checks stop casual tampering, such as posting a made-up score with curl. They can't stop someone who scripts the game itself, so treat the board as a friendly one.
-
-To remove an entry, run this in the D1 console:
+To remove a player and their scores, run this in the D1 console:
 
 ```sql
-DELETE FROM scores WHERE name = 'someone';
+DELETE FROM scores WHERE user_id = (SELECT id FROM users WHERE username = 'someone');
+DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE username = 'someone');
+DELETE FROM users WHERE username = 'someone';
 ```
 
 ## Running locally
