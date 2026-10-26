@@ -43,8 +43,7 @@ wrangler.toml      Cloudflare config (D1 binding)
 
 1. **Create the database.** In the Cloudflare dashboard, open **Storage & Databases → D1 → Create**, name it `gradmac`, then paste the contents of `schema.sql` into its **Console** and run it. Copy the database ID into `wrangler.toml`.
 2. **Create the Pages project.** Go to **Workers & Pages → Create → Pages → Connect to Git** and pick this repo. Leave the build command empty and set the output directory to `public`.
-3. **Add the signing secret.** In the project's **Settings → Variables and Secrets**, add a secret named `SECRET` with a long random value (for example the output of `openssl rand -hex 32`). Redeploy once afterward.
-4. **Add the domain.** Under **Custom domains**, add `gradmac.com`.
+3. **Add the domain.** Under **Custom domains**, add `gradmac.com`.
 
 Every push to `main` deploys automatically.
 
@@ -52,7 +51,7 @@ Every push to `main` deploys automatically.
 
 There is one board per level and duration. It shows the top 10, with each name's best score.
 
-- When a run starts, the server signs a token recording the board and the start time.
+- When a run starts, the server signs a token recording the board and the start time. The signing key is generated on first use and stored in the database, so there is no secret to configure.
 - A score is accepted only after that run's full duration has passed, within 10 minutes of the end, once per token, and at most 1.2 points per second.
 - Names are 1–16 letters, digits, spaces, `.`, `_` or `-`.
 
@@ -68,7 +67,6 @@ DELETE FROM scores WHERE name = 'someone';
 
 ```
 npm install -g wrangler
-echo 'SECRET="dev"' > .dev.vars
 wrangler d1 execute gradmac --local --file schema.sql
 wrangler pages dev
 ```

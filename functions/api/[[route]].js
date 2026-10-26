@@ -4,7 +4,8 @@
 //   POST /api/scores  {token, name, score}  -> {ok, rank}     one submission per token
 //   GET  /api/scores?board=1:60             -> {top:[{name, score}]}
 //
-// Bindings: DB (D1 database), SECRET (random string used to sign run tokens).
+// Binding: DB (D1 database). Run tokens are signed with a key kept in the database,
+// created on first use (or with the SECRET environment variable, if one is set).
 
 const LEVELS = ['1', '2', '3', '4', 'all'];
 const DURATIONS = [15, 30, 60, 120, 300];
@@ -39,6 +40,20 @@ function safeEqual(a, b) {
   return r === 0;
 }
 
+let cachedKey = null;
+async function signingKey(env) {
+  if (env.SECRET) return env.SECRET;
+  if (cachedKey) return cachedKey;
+  let row = await env.DB.prepare("SELECT v FROM config WHERE k = 'hmac'").first();
+  if (!row) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const fresh = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    await env.DB.prepare("INSERT OR IGNORE INTO config (k, v) VALUES ('hmac', ?)").bind(fresh).run();
+    row = await env.DB.prepare("SELECT v FROM config WHERE k = 'hmac'").first();
+  }
+  return (cachedKey = row.v);
+}
+
 async function readJson(request) {
   if (Number(request.headers.get('content-length') || 0) > 2048) return null;
   try { return await request.json(); } catch { return null; }
@@ -48,7 +63,7 @@ async function start(request, env) {
   const body = await readJson(request);
   if (!body || !parseBoard(body.board)) return json({ error: 'bad board' }, 400);
   const payload = `${crypto.randomUUID()}.${body.board}.${Date.now()}`;
-  return json({ token: `${payload}.${await hmac(env.SECRET, payload)}` });
+  return json({ token: `${payload}.${await hmac(await signingKey(env), payload)}` });
 }
 
 async function submit(request, env) {
@@ -57,7 +72,7 @@ async function submit(request, env) {
   const parts = body.token.split('.');
   if (parts.length !== 4) return json({ error: 'bad token' }, 400);
   const [id, board, t, sig] = parts;
-  if (!safeEqual(sig, await hmac(env.SECRET, `${id}.${board}.${t}`))) return json({ error: 'bad token' }, 400);
+  if (!safeEqual(sig, await hmac(await signingKey(env), `${id}.${board}.${t}`))) return json({ error: 'bad token' }, 400);
 
   const b = parseBoard(board);
   if (!b) return json({ error: 'bad board' }, 400);
@@ -96,7 +111,7 @@ async function top(url, env) {
 }
 
 export async function onRequest({ request, env }) {
-  if (!env.DB || !env.SECRET) return json({ error: 'leaderboard not configured' }, 503);
+  if (!env.DB) return json({ error: 'leaderboard not configured' }, 503);
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
   try {
